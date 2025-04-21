@@ -24,7 +24,7 @@ import IngredientsForm from "../../components/recipe/IngredientsForm";
 import StepsForm from "../../components/recipe/StepsForm";
 
 // Supabase 함수 및 타입 불러오기
-// import { saveRecipe, saveIngredients, saveSteps } from "../../lib/supabase";
+import { saveRecipe, saveIngredients, saveSteps } from "../../lib/supabase";
 
 type IngredientType = {
   id: string;
@@ -154,28 +154,28 @@ export default function CreateRecipeScreen() {
         user_id: userId,
       };
 
-      //   const savedRecipe = await saveRecipe(recipeData);
-      //   const recipeId = savedRecipe.id;
+      const savedRecipe = await saveRecipe(recipeData);
+      const recipeId = savedRecipe.id;
 
       // 재료 저장
-      //   const ingredientsData = ingredients.map((ing, index) => ({
-      //     recipe_id: recipeId,
-      //     name: ing.name,
-      //     amount: ing.amount,
-      //     unit: ing.unit,
-      //   }));
+      const ingredientsData = ingredients.map((ing, index) => ({
+        recipe_id: recipeId,
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+      }));
 
-      //   await saveIngredients(ingredientsData);
+      await saveIngredients(ingredientsData);
 
       // 단계 저장
-      //   const stepsData = steps.map((step, index) => ({
-      //     recipe_id: recipeId,
-      //     description: step.description,
-      //     days: step.days,
-      //     order: index + 1,
-      //   }));
+      const stepsData = steps.map((step, index) => ({
+        recipe_id: recipeId,
+        description: step.description,
+        days: step.days,
+        order: index + 1,
+      }));
 
-      //   await saveSteps(stepsData);
+      await saveSteps(stepsData);
 
       // 저장 성공 알림
       Alert.alert("성공", "레시피가 저장되었습니다.", [

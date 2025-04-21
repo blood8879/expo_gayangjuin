@@ -154,7 +154,7 @@ export default function RecipesScreen() {
           </Text>
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center rounded-full bg-white dark:bg-neutral-800 shadow-sm"
-            onPress={() => router.push({ pathname: "/create" } as any)}
+            onPress={() => router.push({ pathname: "/recipes/create" } as any)}
           >
             <Ionicons name="add" size={24} color={theme.primary.DEFAULT} />
           </TouchableOpacity>
