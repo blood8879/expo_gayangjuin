@@ -6,9 +6,11 @@ import { useFonts } from "expo-font";
 import { useColorScheme } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { Ionicons } from "@expo/vector-icons";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import "../global.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { queryClient } from "@/lib/query/queryClient";
 
 // 스플래시 스크린 유지
 SplashScreen.preventAutoHideAsync();
@@ -41,37 +43,39 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <View style={{ flex: 1 }}>
-        {/* 상태바 설정 */}
-        <StatusBar style={isDark ? "light" : "dark"} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <View style={{ flex: 1 }}>
+          {/* 상태바 설정 */}
+          <StatusBar style={isDark ? "light" : "dark"} />
 
-        {/* 스택 네비게이션 설정 */}
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: isDark ? "#121212" : "#F8FAFC",
-            },
-            animation: "slide_from_right",
-          }}
-        >
-          {/* 인증 필요 화면들 */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* 스택 네비게이션 설정 */}
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: isDark ? "#121212" : "#F8FAFC",
+              },
+              animation: "slide_from_right",
+            }}
+          >
+            {/* 인증 필요 화면들 */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          {/* 양조일지 화면들 */}
-          <Stack.Screen name="journals" options={{ headerShown: false }} />
+            {/* 양조일지 화면들 */}
+            <Stack.Screen name="journals" options={{ headerShown: false }} />
 
-          {/* 인증 화면들 */}
-          <Stack.Screen name="login" options={{ headerShown: false }} />
+            {/* 인증 화면들 */}
+            <Stack.Screen name="login" options={{ headerShown: false }} />
 
-          <Stack.Screen
-            name="adult-verification"
-            options={{ headerShown: false }}
-            // MVP에서는 성인인증 화면 사용하지 않음. 필요시 다시 활성화
-          />
-        </Stack>
-      </View>
-    </AuthProvider>
+            <Stack.Screen
+              name="adult-verification"
+              options={{ headerShown: false }}
+              // MVP에서는 성인인증 화면 사용하지 않음. 필요시 다시 활성화
+            />
+          </Stack>
+        </View>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { theme } from "@/constants/theme";
 import { Card } from "@/components/ui/Card";
-import { getRecipeById } from "@/lib/api/recipe";
+import { useRecipe } from "@/lib/query/recipeQueries";
 
 // 타입 정의 추가
 interface Ingredient {
@@ -55,63 +55,8 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
-
-  // 레시피 데이터 가져오기
-  useEffect(() => {
-    async function fetchRecipeDetail() {
-      if (!id) return;
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const data = await getRecipeById(id);
-
-        // 레시피 데이터 변환 및 가공
-        setRecipe({
-          id: data.id,
-          title: data.name, // DB의 name 필드를 title로 표시
-          type: data.type,
-          days: data.total_duration_days || 0,
-          totalDays: data.total_duration_days || 0,
-          progress: 0, // 진행 상태 기능 구현 필요
-          description: data.description,
-          createdAt: data.created_at,
-          image: data.cover_image_url,
-          estimatedAlcohol: data.estimated_abv || 0,
-          isPublic: data.is_public,
-
-          // 재료 데이터 변환
-          ingredients: data.recipe_ingredients.map((ing: any) => ({
-            id: ing.id,
-            name: ing.name,
-            amount: ing.amount,
-            unit: ing.unit,
-          })),
-
-          // 단계 데이터 변환
-          steps: data.recipe_stages.map((stage: any) => ({
-            id: stage.id,
-            order: stage.stage_number,
-            title: stage.title || `단계 ${stage.stage_number}`,
-            description: stage.description,
-            days: stage.duration_days,
-            isDone: false, // 진행 상태 기능 구현 필요
-          })),
-        });
-      } catch (err) {
-        console.error("레시피 상세 조회 오류:", err);
-        setError("레시피를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchRecipeDetail();
-  }, [id]);
+  // React Query 사용
+  const { data: recipe, isLoading, isError, error } = useRecipe(id as string);
 
   // 로딩 화면
   if (isLoading) {
@@ -124,7 +69,7 @@ export default function RecipeDetailScreen() {
   }
 
   // 에러 화면
-  if (error || !recipe) {
+  if (isError || !recipe) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         <View className="px-5 pt-12 pb-2">
@@ -143,7 +88,7 @@ export default function RecipeDetailScreen() {
             color={theme.neutral[400]}
           />
           <Text className="mt-4 text-neutral-600 text-center">
-            {error || "레시피를 찾을 수 없습니다"}
+            {error?.message || "레시피를 찾을 수 없습니다"}
           </Text>
           <TouchableOpacity
             className="mt-6 py-2 px-4 bg-primary-500 rounded-full"
@@ -157,6 +102,37 @@ export default function RecipeDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  // DB 데이터를 UI에 맞게 변환
+  const recipeData = {
+    id: recipe.id,
+    title: recipe.name, // DB의 name 필드를 title로 표시
+    type: recipe.type,
+    days: recipe.total_duration_days || 0,
+    totalDays: recipe.total_duration_days || 0,
+    progress: 0, // 진행 상태는 아직 구현되지 않음
+    description: recipe.description,
+    createdAt: recipe.created_at,
+    image: recipe.cover_image_url,
+    estimatedAlcohol: recipe.estimated_abv || 0,
+    isPublic: recipe.is_public,
+    ingredients: recipe.recipe_ingredients.map((ing: any) => ({
+      id: ing.id,
+      name: ing.name,
+      amount: ing.amount,
+      unit: ing.unit,
+    })),
+    steps: recipe.recipe_stages
+      .sort((a: any, b: any) => a.stage_number - b.stage_number)
+      .map((stage: any) => ({
+        id: stage.id,
+        order: stage.stage_number,
+        title: stage.title || `단계 ${stage.stage_number}`,
+        description: stage.description,
+        days: stage.duration_days,
+        isDone: false,
+      })),
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -206,29 +182,29 @@ export default function RecipeDetailScreen() {
             <View className="p-5">
               <View className="bg-white/30 px-3 py-1.5 rounded-full self-start mb-3">
                 <Text className="text-xs font-semibold text-emerald-700">
-                  {recipe.type}
+                  {recipeData.type}
                 </Text>
               </View>
 
               <Text className="text-neutral-800 text-2xl font-bold mb-2">
-                {recipe.title}
+                {recipeData.title}
               </Text>
 
               <Text className="text-neutral-700 text-base mb-5">
-                {recipe.description}
+                {recipeData.description}
               </Text>
 
               <View className="flex-row justify-between">
                 <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
                   <Ionicons name="time-outline" size={16} color="#1f6b46" />
                   <Text className="text-emerald-800 ml-1 text-xs font-medium">
-                    예상 소요일: {recipe.totalDays || 0}일
+                    예상 소요일: {recipeData.totalDays || 0}일
                   </Text>
                 </View>
                 <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
                   <Ionicons name="wine-outline" size={16} color="#1f6b46" />
                   <Text className="text-emerald-800 ml-1 text-xs font-medium">
-                    예상 도수: {recipe.estimatedAlcohol || 0}%
+                    예상 도수: {recipeData.estimatedAlcohol || 0}%
                   </Text>
                 </View>
               </View>
@@ -243,12 +219,12 @@ export default function RecipeDetailScreen() {
           </View>
 
           <Card elevation="none" className="p-4 bg-white rounded-[8px]">
-            {recipe.ingredients && recipe.ingredients.length > 0 ? (
-              recipe.ingredients.map((ingredient, index) => (
+            {recipeData.ingredients && recipeData.ingredients.length > 0 ? (
+              recipeData.ingredients.map((ingredient, index) => (
                 <View
                   key={ingredient.id}
                   className={`flex-row justify-between py-3 ${
-                    index < recipe.ingredients.length - 1
+                    index < recipeData.ingredients.length - 1
                       ? "border-b border-gray-100"
                       : ""
                   }`}
@@ -277,8 +253,8 @@ export default function RecipeDetailScreen() {
             </Text>
           </View>
 
-          {recipe.steps && recipe.steps.length > 0 ? (
-            recipe.steps.map((step, index) => (
+          {recipeData.steps && recipeData.steps.length > 0 ? (
+            recipeData.steps.map((step, index) => (
               <Card
                 key={step.id}
                 elevation="none"
@@ -379,12 +355,12 @@ export default function RecipeDetailScreen() {
               </View>
               <TouchableOpacity
                 className={`w-14 h-8 rounded-full ${
-                  recipe.isPublic ? "bg-emerald-500" : "bg-neutral-300"
+                  recipeData.isPublic ? "bg-emerald-500" : "bg-neutral-300"
                 } justify-center px-1`}
               >
                 <View
                   className={`w-6 h-6 rounded-full bg-white ${
-                    recipe.isPublic ? "ml-auto" : "mr-auto"
+                    recipeData.isPublic ? "ml-auto" : "mr-auto"
                   }`}
                 />
               </TouchableOpacity>
@@ -404,7 +380,10 @@ export default function RecipeDetailScreen() {
             </Card>
           </TouchableOpacity>
 
-          <TouchableOpacity className="flex-1">
+          <TouchableOpacity
+            className="flex-1"
+            onPress={() => router.push(`/recipes/edit/${recipeData.id}`)}
+          >
             <Card elevation="none" className="p-4 bg-emerald-500 rounded-[8px]">
               <Text className="text-center font-bold text-white">
                 레시피 수정

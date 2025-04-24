@@ -225,3 +225,111 @@ export async function saveLegacySteps(
 
   return data;
 }
+
+/**
+ * 레시피 업데이트 함수
+ */
+export async function updateRecipe(
+  id: string,
+  recipeData: Partial<RecipeFormData>
+) {
+  // UI 데이터를 DB 스키마 형식으로 변환
+  const dbRecipe: Partial<Recipe> = {};
+
+  if (recipeData.title !== undefined) dbRecipe.name = recipeData.title;
+  if (recipeData.category !== undefined) dbRecipe.type = recipeData.category;
+  if (recipeData.description !== undefined)
+    dbRecipe.description = recipeData.description;
+  if (recipeData.is_public !== undefined)
+    dbRecipe.is_public = recipeData.is_public;
+
+  const { data, error } = await supabase
+    .from("recipes")
+    .update(dbRecipe)
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    console.error("레시피 업데이트 에러:", error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
+/**
+ * 레시피 재료 업데이트 함수 (기존 재료 삭제 후 새로 추가)
+ */
+export async function updateIngredients(
+  recipeId: string,
+  ingredients: Omit<Ingredient, "id" | "created_at">[]
+) {
+  // 1. 기존 재료 데이터 삭제
+  const { error: deleteError } = await supabase
+    .from("recipe_ingredients")
+    .delete()
+    .eq("recipe_id", recipeId);
+
+  if (deleteError) {
+    console.error("레시피 재료 삭제 에러:", deleteError);
+    throw deleteError;
+  }
+
+  // 2. 새 재료 데이터 추가
+  if (ingredients.length === 0) return []; // 새 재료가 없으면 빈 배열 반환
+
+  const { data, error } = await supabase
+    .from("recipe_ingredients")
+    .insert(ingredients)
+    .select();
+
+  if (error) {
+    console.error("레시피 재료 업데이트 에러:", error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * 레시피 단계 업데이트 함수 (기존 단계 삭제 후 새로 추가)
+ */
+export async function updateSteps(
+  recipeId: string,
+  steps: Omit<Step, "id" | "created_at">[]
+) {
+  // 1. 기존 단계 데이터 삭제
+  const { error: deleteError } = await supabase
+    .from("recipe_stages")
+    .delete()
+    .eq("recipe_id", recipeId);
+
+  if (deleteError) {
+    console.error("레시피 단계 삭제 에러:", deleteError);
+    throw deleteError;
+  }
+
+  // 2. 새 단계 데이터 추가
+  if (steps.length === 0) return []; // 새 단계가 없으면 빈 배열 반환
+
+  // stagesData에 title 필드 포함 (기존 saveSteps와 동일한 처리)
+  const stagesData = steps.map((step) => ({
+    recipe_id: step.recipe_id,
+    description: step.description,
+    duration_days: step.duration_days,
+    stage_number: step.stage_number,
+    title: step.title,
+  }));
+
+  const { data, error } = await supabase
+    .from("recipe_stages")
+    .insert(stagesData)
+    .select();
+
+  if (error) {
+    console.error("레시피 단계 업데이트 에러:", error);
+    throw error;
+  }
+
+  return data;
+}
