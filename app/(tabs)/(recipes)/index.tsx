@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,18 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { theme } from "@/constants/theme";
+import { getRecipes } from "@/lib/api/recipe";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Recipe 타입 정의
 interface Recipe {
-  id: number;
+  id: string | number;
   title: string;
   type: "막걸리" | "과실주" | "약주/청주" | "전통주";
   days: number;
@@ -23,10 +26,19 @@ interface Recipe {
   isPublic: boolean;
   star: number;
   reviewCount: number;
+  name?: string;
+  is_public?: boolean;
+  description?: string;
+  created_at?: string;
+  total_duration_days?: number;
 }
 
 export default function RecipesScreen() {
+  const { isAuthenticated, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 레시피 카테고리
   const categories = [
@@ -67,52 +79,40 @@ export default function RecipesScreen() {
     },
   ];
 
-  // 레시피 데이터
-  const recipes: Recipe[] = [
-    {
-      id: 1,
-      title: "전통 막걸리",
-      type: "막걸리",
-      days: 7,
-      progress: 45,
-      isPublic: true,
-      star: 4.5,
-      reviewCount: 12,
-    },
-    {
-      id: 2,
-      title: "매실주",
-      type: "과실주",
-      days: 30,
-      progress: 25,
-      isPublic: true,
-      star: 4.2,
-      reviewCount: 8,
-    },
-    {
-      id: 3,
-      title: "약주 만들기",
-      type: "약주/청주",
-      days: 14,
-      progress: 75,
-      isPublic: false,
-      star: 0,
-      reviewCount: 0,
-    },
-    {
-      id: 4,
-      title: "오미자주",
-      type: "과실주",
-      days: 60,
-      progress: 10,
-      isPublic: true,
-      star: 4.8,
-      reviewCount: 5,
-    },
-  ];
-
   // 현재 선택된 카테고리
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  // 레시피 데이터 가져오기
+  useEffect(() => {
+    async function fetchRecipes() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const recipesData = await getRecipes();
+
+        // API 응답 데이터를 UI에 맞게 변환
+        const formattedRecipes = recipesData.map((recipe: any) => ({
+          id: recipe.id,
+          title: recipe.name, // DB의 name 필드를 title로 표시
+          type: recipe.type as "막걸리" | "과실주" | "약주/청주" | "전통주",
+          days: recipe.total_duration_days || 0,
+          progress: 0, // 진행 상태는 아직 구현되지 않음
+          isPublic: recipe.is_public,
+          star: 0, // 리뷰 기능 구현 전
+          reviewCount: 0, // 리뷰 기능 구현 전
+        }));
+
+        setRecipes(formattedRecipes);
+      } catch (err) {
+        console.error("Error fetching recipes:", err);
+        setError("레시피를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRecipes();
+  }, []);
 
   // 카테고리 필터링
   const filteredRecipes = recipes
@@ -154,7 +154,7 @@ export default function RecipesScreen() {
           </Text>
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center rounded-full bg-white dark:bg-neutral-800 shadow-sm"
-            onPress={() => router.push({ pathname: "/recipes/create" } as any)}
+            onPress={() => router.push("/recipes/create")}
           >
             <Ionicons name="add" size={24} color={theme.primary.DEFAULT} />
           </TouchableOpacity>
@@ -230,7 +230,31 @@ export default function RecipesScreen() {
 
       {/* 레시피 목록 */}
       <ScrollView className="flex-1 px-5">
-        {filteredRecipes.length > 0 ? (
+        {isLoading ? (
+          <View className="items-center justify-center py-20">
+            <ActivityIndicator size="large" color={theme.primary.DEFAULT} />
+            <Text className="mt-4 text-neutral-500 dark:text-neutral-400">
+              레시피를 불러오는 중...
+            </Text>
+          </View>
+        ) : error ? (
+          <View className="items-center justify-center py-20">
+            <Ionicons
+              name="alert-circle-outline"
+              size={40}
+              color={theme.neutral[400]}
+            />
+            <Text className="mt-3 text-neutral-500 dark:text-neutral-400 text-center">
+              {error}
+            </Text>
+            <TouchableOpacity
+              className="mt-4 py-2 px-4 bg-primary-500 rounded-full"
+              onPress={() => setIsLoading(true)} // 다시 로딩 상태로 만들어 재시도 효과
+            >
+              <Text className="text-white font-medium">다시 시도</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredRecipes.length > 0 ? (
           filteredRecipes.map((recipe) => (
             <TouchableOpacity
               key={recipe.id}
@@ -329,7 +353,7 @@ export default function RecipesScreen() {
           <View className="items-center justify-center py-10">
             <Ionicons name="search" size={40} color={theme.neutral[300]} />
             <Text className="text-neutral-500 dark:text-neutral-400 mt-3 text-center">
-              검색 결과가 없습니다
+              {searchQuery ? "검색 결과가 없습니다" : "레시피가 없습니다"}
             </Text>
           </View>
         )}
@@ -337,7 +361,7 @@ export default function RecipesScreen() {
         {/* 새 레시피 추가 버튼 */}
         <TouchableOpacity
           className="mt-2 mb-10"
-          onPress={() => router.push({ pathname: "/create" } as any)}
+          onPress={() => router.push("/recipes/create")}
         >
           <View className="bg-white dark:bg-neutral-800 rounded-[16px] py-4 shadow-sm border border-neutral-100 dark:border-neutral-700 flex-row items-center justify-center">
             <Ionicons
