@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,87 +6,157 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { theme } from "@/constants/theme";
 import { Card } from "@/components/ui/Card";
+import { getRecipeById } from "@/lib/api/recipe";
+
+// 타입 정의 추가
+interface Ingredient {
+  id: string | number;
+  name: string;
+  amount: number | string;
+  unit: string;
+}
+
+interface Step {
+  id: string | number;
+  order: number;
+  title: string;
+  description: string;
+  days: number;
+  isDone: boolean;
+}
+
+interface RecipeDetail {
+  id: string | number;
+  title: string;
+  type: string;
+  days: number;
+  totalDays: number;
+  progress: number;
+  description: string;
+  createdAt: string;
+  image: string | null;
+  estimatedAlcohol: number;
+  isPublic: boolean;
+  ingredients: Ingredient[];
+  steps: Step[];
+}
 
 export default function RecipeDetailScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const recipe = {
-    id: 1,
-    title: "전통 막걸리",
-    type: "막걸리",
-    days: 7,
-    totalDays: 14,
-    progress: 45,
-    description: "누룩과 쌀을 이용한 전통적인 막걸리 제조법",
-    createdAt: "2023-10-01",
-    image: null,
-    steps: [
-      {
-        id: 1,
-        order: 1,
-        title: "재료 준비",
-        description: "쌀 1kg, 누룩 200g, 물 1.5L를 준비합니다.",
-        isDone: true,
-      },
-      {
-        id: 2,
-        order: 2,
-        title: "쌀 불리기",
-        description: "쌀을 깨끗이 씻어 3시간 정도 불려줍니다.",
-        isDone: true,
-      },
-      {
-        id: 3,
-        order: 3,
-        title: "쌀 찌기",
-        description: "불린 쌀을 찜기에 넣고 40분간 쪄줍니다.",
-        isDone: true,
-      },
-      {
-        id: 4,
-        order: 4,
-        title: "누룩 섞기",
-        description: "식힌 쌀에 누룩을 고르게 섞어줍니다.",
-        isDone: false,
-      },
-      {
-        id: 5,
-        order: 5,
-        title: "발효",
-        description: "항아리나 유리병에 넣고 20-25도에서 7일간 발효시킵니다.",
-        isDone: false,
-      },
-      {
-        id: 6,
-        order: 6,
-        title: "여과",
-        description: "발효가 끝나면 면포를 이용해 앙금과 액체를 분리합니다.",
-        isDone: false,
-      },
-      {
-        id: 7,
-        order: 7,
-        title: "숙성",
-        description: "여과한 막걸리를 냉장고에서 3일간 숙성시킵니다.",
-        isDone: false,
-      },
-    ],
-    ingredients: [
-      { id: 1, name: "쌀", amount: 1, unit: "kg" },
-      { id: 2, name: "누룩", amount: 200, unit: "g" },
-      { id: 3, name: "물", amount: 1.5, unit: "L" },
-    ],
-    estimatedAlcohol: 6.5,
-    isPublic: true,
-  };
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
+
+  // 레시피 데이터 가져오기
+  useEffect(() => {
+    async function fetchRecipeDetail() {
+      if (!id) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const data = await getRecipeById(id);
+
+        // 레시피 데이터 변환 및 가공
+        setRecipe({
+          id: data.id,
+          title: data.name, // DB의 name 필드를 title로 표시
+          type: data.type,
+          days: data.total_duration_days || 0,
+          totalDays: data.total_duration_days || 0,
+          progress: 0, // 진행 상태 기능 구현 필요
+          description: data.description,
+          createdAt: data.created_at,
+          image: data.cover_image_url,
+          estimatedAlcohol: data.estimated_abv || 0,
+          isPublic: data.is_public,
+
+          // 재료 데이터 변환
+          ingredients: data.recipe_ingredients.map((ing: any) => ({
+            id: ing.id,
+            name: ing.name,
+            amount: ing.amount,
+            unit: ing.unit,
+          })),
+
+          // 단계 데이터 변환
+          steps: data.recipe_stages.map((stage: any) => ({
+            id: stage.id,
+            order: stage.stage_number,
+            title: stage.title || `단계 ${stage.stage_number}`,
+            description: stage.description,
+            days: stage.duration_days,
+            isDone: false, // 진행 상태 기능 구현 필요
+          })),
+        });
+      } catch (err) {
+        console.error("레시피 상세 조회 오류:", err);
+        setError("레시피를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRecipeDetail();
+  }, [id]);
+
+  // 로딩 화면
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color={theme.primary.DEFAULT} />
+        <Text className="mt-4 text-neutral-500">레시피를 불러오는 중...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // 에러 화면
+  if (error || !recipe) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="px-5 pt-12 pb-2">
+          <TouchableOpacity
+            className="w-10 h-10 items-center justify-center rounded-full bg-white"
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={22} color={theme.neutral[600]} />
+          </TouchableOpacity>
+        </View>
+
+        <View className="flex-1 items-center justify-center px-5">
+          <Ionicons
+            name="alert-circle-outline"
+            size={50}
+            color={theme.neutral[400]}
+          />
+          <Text className="mt-4 text-neutral-600 text-center">
+            {error || "레시피를 찾을 수 없습니다"}
+          </Text>
+          <TouchableOpacity
+            className="mt-6 py-2 px-4 bg-primary-500 rounded-full"
+            onPress={() => router.back()}
+          >
+            <Text className="text-white font-medium">
+              이전 화면으로 돌아가기
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -152,13 +222,13 @@ export default function RecipeDetailScreen() {
                 <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
                   <Ionicons name="time-outline" size={16} color="#1f6b46" />
                   <Text className="text-emerald-800 ml-1 text-xs font-medium">
-                    예상 소요일: {recipe.totalDays}일
+                    예상 소요일: {recipe.totalDays || 0}일
                   </Text>
                 </View>
                 <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
                   <Ionicons name="wine-outline" size={16} color="#1f6b46" />
                   <Text className="text-emerald-800 ml-1 text-xs font-medium">
-                    예상 도수: {recipe.estimatedAlcohol}%
+                    예상 도수: {recipe.estimatedAlcohol || 0}%
                   </Text>
                 </View>
               </View>
@@ -170,30 +240,32 @@ export default function RecipeDetailScreen() {
         <View className="px-5 mb-6 py-2">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-lg font-bold text-neutral-800">재료</Text>
-            <TouchableOpacity className="flex-row items-center">
-              <Ionicons name="add-circle-outline" size={18} color="#059669" />
-              <Text className="text-emerald-600 ml-1 font-medium">편집</Text>
-            </TouchableOpacity>
           </View>
 
           <Card elevation="none" className="p-4 bg-white rounded-[8px]">
-            {recipe.ingredients.map((ingredient, index) => (
-              <View
-                key={ingredient.id}
-                className={`flex-row justify-between py-3 ${
-                  index < recipe.ingredients.length - 1
-                    ? "border-b border-gray-100"
-                    : ""
-                }`}
-              >
-                <Text className="text-neutral-800 font-medium">
-                  {ingredient.name}
-                </Text>
-                <Text className="text-neutral-500">
-                  {ingredient.amount} {ingredient.unit}
-                </Text>
-              </View>
-            ))}
+            {recipe.ingredients && recipe.ingredients.length > 0 ? (
+              recipe.ingredients.map((ingredient, index) => (
+                <View
+                  key={ingredient.id}
+                  className={`flex-row justify-between py-3 ${
+                    index < recipe.ingredients.length - 1
+                      ? "border-b border-gray-100"
+                      : ""
+                  }`}
+                >
+                  <Text className="text-neutral-800 font-medium">
+                    {ingredient.name}
+                  </Text>
+                  <Text className="text-neutral-500">
+                    {ingredient.amount} {ingredient.unit}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text className="text-neutral-500 py-3 text-center">
+                등록된 재료가 없습니다
+              </Text>
+            )}
           </Card>
         </View>
 
@@ -203,49 +275,59 @@ export default function RecipeDetailScreen() {
             <Text className="text-lg font-bold text-neutral-800">
               양조 단계
             </Text>
-            <TouchableOpacity className="flex-row items-center">
-              <Ionicons name="add-circle-outline" size={18} color="#059669" />
-              <Text className="text-emerald-600 ml-1 font-medium">편집</Text>
-            </TouchableOpacity>
           </View>
 
-          {recipe.steps.map((step, index) => (
-            <Card
-              key={step.id}
-              elevation="none"
-              className="mb-4 overflow-hidden bg-white rounded-[8px]"
-            >
-              <View className="p-4">
-                <View className="flex-row items-center mb-2">
-                  <View className="w-7 h-7 rounded-full items-center justify-center bg-emerald-100">
-                    <Text className="text-xs font-bold text-emerald-700">
-                      {step.order}
+          {recipe.steps && recipe.steps.length > 0 ? (
+            recipe.steps.map((step, index) => (
+              <Card
+                key={step.id}
+                elevation="none"
+                className="mb-4 overflow-hidden bg-white rounded-[8px]"
+              >
+                <View className="p-4">
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-7 h-7 rounded-full items-center justify-center bg-emerald-100">
+                      <Text className="text-xs font-bold text-emerald-700">
+                        {step.order}
+                      </Text>
+                    </View>
+                    <Text className="text-base font-semibold text-neutral-800 ml-3">
+                      {step.title}
                     </Text>
                   </View>
-                  <Text className="text-base font-semibold text-neutral-800 ml-3">
-                    {step.title}
+
+                  <Text className="text-neutral-600 ml-10">
+                    {step.description}
                   </Text>
-                </View>
 
-                <Text className="text-neutral-600 ml-10">
-                  {step.description}
-                </Text>
-
-                <View className="flex-row mt-4 ml-10">
-                  <TouchableOpacity className="flex-row items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                    <Ionicons
-                      name="camera-outline"
-                      size={16}
-                      color={theme.neutral[500]}
-                    />
-                    <Text className="ml-1 text-xs text-neutral-600">
-                      참고 사진
+                  {step.days > 0 && (
+                    <Text className="text-neutral-500 ml-10 mt-2 text-xs">
+                      소요 기간: {step.days}일
                     </Text>
-                  </TouchableOpacity>
+                  )}
+
+                  {/* <View className="flex-row mt-4 ml-10">
+                    <TouchableOpacity className="flex-row items-center bg-gray-50 px-3 py-1.5 rounded-full">
+                      <Ionicons
+                        name="camera-outline"
+                        size={16}
+                        color={theme.neutral[500]}
+                      />
+                      <Text className="ml-1 text-xs text-neutral-600">
+                        참고 사진
+                      </Text>
+                    </TouchableOpacity>
+                  </View> */}
                 </View>
-              </View>
+              </Card>
+            ))
+          ) : (
+            <Card elevation="none" className="p-4 bg-white rounded-[8px]">
+              <Text className="text-neutral-500 py-3 text-center">
+                등록된 단계가 없습니다
+              </Text>
             </Card>
-          ))}
+          )}
         </View>
 
         {/* 알코올 도수 계산 버튼 */}
