@@ -4,8 +4,8 @@ import {
   signOut as supabaseSignOut,
   getCurrentUser,
   getCurrentSession,
-  supabase,
-} from "../lib/supabase";
+} from "../lib/api/auth";
+import { supabase } from "../lib/supabase";
 import { User, Session } from "@supabase/supabase-js";
 import {
   getProfile,
@@ -49,16 +49,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const refreshSession = async () => {
     try {
       setIsLoading(true);
+      console.log("세션 새로고침 시도 중...");
 
       // 세션 가져오기
       const currentSession = await getCurrentSession();
+      console.log("현재 세션 상태:", currentSession ? "있음" : "없음");
+
       setSession(currentSession);
 
       // 사용자 정보 가져오기
       if (currentSession) {
         const currentUser = await getCurrentUser();
+        console.log("사용자 정보 가져옴:", currentUser?.id);
         setUser(currentUser);
       } else {
+        console.log("세션이 없어 사용자 정보를 null로 설정");
         setUser(null);
       }
     } catch (error) {
@@ -73,6 +78,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 초기 로그인 상태 확인
   useEffect(() => {
     refreshSession();
+
+    // 세션 변경 감지 이벤트 리스너 설정
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log("Auth 상태 변경:", event);
+        setSession(newSession);
+
+        if (newSession) {
+          const currentUser = await getCurrentUser();
+          setUser(currentUser);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // 컴포넌트 언마운트 시 리스너 정리
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   // 구글 로그인
@@ -97,6 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("✅ handleKakaoSignIn 함수 실행됨");
 
     try {
+      setIsLoading(true);
       console.log("🔄 카카오 로그인 시도 중...");
 
       let token;
@@ -129,8 +155,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // console.log("✅ Supabase 로그인 성공:", data);
-      router.replace("/(tabs)"); // 로그인 후 이동
+      console.log("✅ Supabase 로그인 성공:", data.user?.id);
+
+      // 로그인 성공 후 세션 상태 갱신
+      setSession(data.session);
+      setUser(data.user);
+
+      // 로그인 완료 후 세션 상태 확인
+      setTimeout(async () => {
+        await refreshSession();
+        console.log("로그인 후 세션 확인 완료");
+        router.replace("/(tabs)"); // 로그인 후 이동
+      }, 500);
     } catch (error: any) {
       console.error("❌ Kakao sign-in error (전체):", error);
       Alert.alert(
@@ -138,6 +174,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         error.message || "카카오 로그인 중 오류가 발생했습니다."
       );
     } finally {
+      setIsLoading(false);
       await WebBrowser.coolDownAsync();
     }
   };
@@ -146,7 +183,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOutUser = async () => {
     try {
       setIsLoading(true);
+      console.log("로그아웃 시도 중...");
       await supabaseSignOut();
+      console.log("로그아웃 성공");
       setUser(null);
       setSession(null);
     } catch (error) {

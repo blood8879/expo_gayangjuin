@@ -28,7 +28,7 @@ export default function BasicInfo({
   isPublic,
   setIsPublic,
 }: BasicInfoProps) {
-  const categories = ["막걸리", "맥주", "와인", "기타"];
+  const categories = ["막걸리", "과실주", "약주/청주", "전통주"];
 
   const inputClass =
     Platform.OS === "android"

@@ -23,8 +23,14 @@ import BasicInfo from "../../components/recipe/BasicInfo";
 import IngredientsForm from "../../components/recipe/IngredientsForm";
 import StepsForm from "../../components/recipe/StepsForm";
 
-// Supabase 함수 및 타입 불러오기
-import { saveRecipe, saveIngredients, saveSteps } from "../../lib/supabase";
+// 새로운 API 모듈에서 함수 불러오기
+import {
+  saveRecipe,
+  saveIngredients,
+  saveSteps,
+  RecipeFormData,
+} from "../../lib/api/recipe";
+import { useAuth } from "../../contexts/AuthContext";
 
 type IngredientType = {
   id: string;
@@ -42,6 +48,7 @@ type StepType = {
 
 export default function CreateRecipeScreen() {
   const router = useRouter();
+  const { user, isAuthenticated, refreshSession } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,53 +64,91 @@ export default function CreateRecipeScreen() {
     { id: "1", description: "", days: "" },
   ]);
 
-  const categories = ["막걸리", "맥주", "와인", "기타"];
+  // 초기 데이터 로딩 (임시 저장된 레시피)
+  useEffect(() => {
+    // 처음 한 번만 세션 확인
+    const init = async () => {
+      try {
+        await refreshSession();
+        await loadTempRecipe();
+      } catch (error) {
+        console.error("초기화 오류:", error);
+      }
+    };
 
-  const addIngredient = () => {
-    const newId = String(ingredients.length + 1);
-    setIngredients([
-      ...ingredients,
-      { id: newId, name: "", amount: "", unit: "g", isCustomUnit: false },
-    ]);
-  };
+    init();
+  }, []); // 빈 의존성 배열로 한 번만 실행
 
-  const removeIngredient = (id: string) => {
-    if (ingredients.length > 1) {
-      setIngredients(ingredients.filter((ing) => ing.id !== id));
+  // 임시 저장 데이터 로드 함수
+  const loadTempRecipe = async () => {
+    try {
+      const tempRecipeString = await AsyncStorage.getItem("temp-recipe");
+
+      if (tempRecipeString) {
+        const tempRecipe = JSON.parse(tempRecipeString);
+
+        // 임시 저장 데이터로 상태 복원
+        setTitle(tempRecipe.title || "");
+        setDescription(tempRecipe.description || "");
+        setCategory(tempRecipe.category || "막걸리");
+        setIsPublic(tempRecipe.isPublic);
+
+        if (tempRecipe.ingredients && tempRecipe.ingredients.length > 0) {
+          setIngredients(tempRecipe.ingredients);
+        }
+
+        if (tempRecipe.steps && tempRecipe.steps.length > 0) {
+          setSteps(tempRecipe.steps);
+        }
+
+        // 데이터를 불러온 후 임시 저장 데이터 삭제
+        await AsyncStorage.removeItem("temp-recipe");
+
+        // 알림 표시
+        Alert.alert("알림", "임시 저장된 레시피를 불러왔습니다.");
+      }
+    } catch (error) {
+      console.error("임시 레시피 로드 오류:", error);
     }
-  };
-
-  const updateIngredient = (
-    id: string,
-    field: keyof IngredientType,
-    value: any // 타입 에러 수정을 위해 any 타입으로 변경
-  ) => {
-    setIngredients(
-      ingredients.map((ing) =>
-        ing.id === id ? { ...ing, [field]: value } : ing
-      )
-    );
-  };
-
-  const addStep = () => {
-    const newId = String(steps.length + 1);
-    setSteps([...steps, { id: newId, description: "", days: "" }]);
-  };
-
-  const removeStep = (id: string) => {
-    if (steps.length > 1) {
-      setSteps(steps.filter((step) => step.id !== id));
-    }
-  };
-
-  const updateStep = (id: string, field: keyof StepType, value: string) => {
-    setSteps(
-      steps.map((step) => (step.id === id ? { ...step, [field]: value } : step))
-    );
   };
 
   const handleSave = async () => {
     try {
+      // 로그인 확인
+      if (!isAuthenticated || !user) {
+        // 현재 작성 중인 레시피 데이터 임시 저장
+        const tempRecipeData = {
+          title,
+          description,
+          category,
+          isPublic,
+          ingredients,
+          steps,
+        };
+
+        // AsyncStorage에 임시 저장
+        await AsyncStorage.setItem(
+          "temp-recipe",
+          JSON.stringify(tempRecipeData)
+        );
+
+        Alert.alert(
+          "로그인 필요",
+          "레시피를 저장하려면 로그인이 필요합니다. 작성 중인 내용은 임시 저장됩니다.",
+          [
+            {
+              text: "로그인 화면으로",
+              onPress: () => router.push("/login"),
+            },
+            {
+              text: "취소",
+              style: "cancel",
+            },
+          ]
+        );
+        return;
+      }
+
       // 폼 유효성 검사
       if (!title.trim()) {
         Alert.alert("알림", "레시피 제목을 입력해주세요.");
@@ -141,12 +186,11 @@ export default function CreateRecipeScreen() {
       // 저장 중 상태로 변경
       setIsSaving(true);
 
-      // 임시 사용자 ID (실제 앱에서는 인증된 사용자 ID를 사용해야 함)
-      const userToken = await AsyncStorage.getItem("user-token");
-      const userId = userToken || "temp-user-id";
+      // 사용자 ID 사용 (인증된 사용자의 ID 사용)
+      const userId = user.id;
 
-      // 레시피 저장
-      const recipeData = {
+      // 레시피 폼 데이터 준비
+      const recipeData: RecipeFormData = {
         title,
         description,
         category,
@@ -154,25 +198,28 @@ export default function CreateRecipeScreen() {
         user_id: userId,
       };
 
+      // 레시피 저장
       const savedRecipe = await saveRecipe(recipeData);
       const recipeId = savedRecipe.id;
 
-      // 재료 저장
+      // 재료 저장 - stage 필드 추가
       const ingredientsData = ingredients.map((ing, index) => ({
         recipe_id: recipeId,
         name: ing.name,
         amount: ing.amount,
         unit: ing.unit,
+        stage: 1, // stage 필드 명시적으로 설정
       }));
 
       await saveIngredients(ingredientsData);
 
-      // 단계 저장
+      // 단계 저장 - days를 duration_days로 변경, stage_number 필드 사용
       const stepsData = steps.map((step, index) => ({
         recipe_id: recipeId,
         description: step.description,
-        days: step.days,
-        order: index + 1,
+        duration_days: parseInt(step.days) || 0, // string을 number로 변환하고, NaN인 경우 0으로 설정
+        stage_number: index + 1, // order 대신 stage_number 필드 사용
+        title: `단계 ${index + 1}`, // title 필드 추가 (not null constraint 위반 방지)
       }));
 
       await saveSteps(stepsData);
@@ -194,6 +241,70 @@ export default function CreateRecipeScreen() {
       setIsSaving(false);
     }
   };
+
+  // 재료 추가
+  const addIngredient = () => {
+    const newId = String(ingredients.length + 1);
+    setIngredients([
+      ...ingredients,
+      { id: newId, name: "", amount: "", unit: "g", isCustomUnit: false },
+    ]);
+  };
+
+  // 재료 제거
+  const removeIngredient = (id: string) => {
+    if (ingredients.length > 1) {
+      setIngredients(ingredients.filter((ing) => ing.id !== id));
+    }
+  };
+
+  // 재료 업데이트
+  const updateIngredient = (
+    id: string,
+    field: keyof IngredientType,
+    value: any
+  ) => {
+    setIngredients(
+      ingredients.map((ing) =>
+        ing.id === id ? { ...ing, [field]: value } : ing
+      )
+    );
+  };
+
+  // 단계 추가
+  const addStep = () => {
+    const newId = String(steps.length + 1);
+    setSteps([...steps, { id: newId, description: "", days: "" }]);
+  };
+
+  // 단계 제거
+  const removeStep = (id: string) => {
+    if (steps.length > 1) {
+      setSteps(steps.filter((step) => step.id !== id));
+    }
+  };
+
+  // 단계 업데이트
+  const updateStep = (id: string, field: keyof StepType, value: string) => {
+    setSteps(
+      steps.map((step) => (step.id === id ? { ...step, [field]: value } : step))
+    );
+  };
+
+  // 각 재료 입력 필드의 ref를 저장하기 위한 객체
+  const customUnitInputRefs = useRef<{
+    [key: string]: React.RefObject<TextInput> | null;
+  }>({});
+
+  // 각 재료마다 ref 생성
+  const createInputRef = (id: string) => {
+    if (!customUnitInputRefs.current[id]) {
+      customUnitInputRefs.current[id] = React.createRef<TextInput>();
+    }
+    return customUnitInputRefs.current[id];
+  };
+
+  const categories = ["막걸리", "맥주", "와인", "기타"];
 
   const inputClass =
     Platform.OS === "android"
@@ -238,48 +349,6 @@ export default function CreateRecipeScreen() {
     string | null
   >(null);
   const [showUnitModal, setShowUnitModal] = useState(false);
-
-  // 각 재료 입력 필드의 ref를 저장하기 위한 객체
-  const customUnitInputRefs = useRef<{
-    [key: string]: React.RefObject<TextInput> | null;
-  }>({});
-
-  // 단위 선택 처리 함수
-  const handleUnitSelection = (unit: string, ingredientId: string) => {
-    if (unit === "직접 입력") {
-      // 상태 업데이트를 한번에 처리하여 불필요한 렌더링 방지
-      setIngredients(
-        ingredients.map((ing) =>
-          ing.id === ingredientId
-            ? { ...ing, isCustomUnit: true, unit: "" }
-            : ing
-        )
-      );
-    } else {
-      // 단위 선택 시 상태 업데이트를 한번에 처리
-      setIngredients(
-        ingredients.map((ing) =>
-          ing.id === ingredientId ? { ...ing, isCustomUnit: false, unit } : ing
-        )
-      );
-    }
-    setShowUnitModal(false);
-    setSelectedIngredientId(null);
-  };
-
-  // 각 재료마다 ref 생성
-  const createInputRef = (id: string) => {
-    if (!customUnitInputRefs.current[id]) {
-      customUnitInputRefs.current[id] = React.createRef<TextInput>();
-    }
-    return customUnitInputRefs.current[id];
-  };
-
-  // 직접 입력 필드용 커스텀 스타일
-  const customUnitInputClass =
-    Platform.OS === "android"
-      ? "flex-1 mr-2 w-[60px] h-12 text-center border-2 border-emerald-400 p-3 text-base rounded-[8px] bg-white"
-      : "flex-1 mr-2 w-[60px] h-12 text-center border-2 border-emerald-400 p-3 bg-white text-base rounded-[8px]";
 
   // 입력 필드 값 변경 처리 함수 - 별도 분리하여 리렌더링 최소화
   const handleUnitChange = (id: string, value: string) => {
