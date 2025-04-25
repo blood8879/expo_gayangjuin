@@ -139,6 +139,33 @@ export async function getRecipes() {
  * 레시피 상세 조회 함수
  */
 export async function getRecipeById(id: string) {
+  console.log(`Retrieving recipe with ID: ${id}`);
+
+  // 스키마 디버깅: 테이블 스키마 확인
+  try {
+    // 레시피 테이블 스키마 확인
+    const { data: recipeSchema } = await supabase
+      .from("recipes")
+      .select("*")
+      .limit(1);
+
+    if (recipeSchema && recipeSchema.length > 0) {
+      console.log("RECIPE TABLE SCHEMA:", Object.keys(recipeSchema[0]));
+    }
+
+    // 레시피 단계 테이블 스키마 확인
+    const { data: stageSchema } = await supabase
+      .from("recipe_stages")
+      .select("*")
+      .limit(1);
+
+    if (stageSchema && stageSchema.length > 0) {
+      console.log("RECIPE_STAGES TABLE SCHEMA:", Object.keys(stageSchema[0]));
+    }
+  } catch (e) {
+    console.error("Schema inspection failed:", e);
+  }
+
   const { data, error } = await supabase
     .from("recipes")
     .select(
@@ -154,6 +181,19 @@ export async function getRecipeById(id: string) {
   if (error) {
     console.error("레시피 상세 조회 에러:", error);
     throw error;
+  }
+
+  // 성공 시 결과 로깅
+  if (data) {
+    console.log(
+      `Successfully retrieved recipe: ${data.id} - ${data.name}, Type: ${data.type}`
+    );
+    console.log(`Number of stages: ${data.recipe_stages?.length || 0}`);
+    if (data.recipe_stages && data.recipe_stages.length > 0) {
+      console.log(
+        `Sample stage keys: ${Object.keys(data.recipe_stages[0]).join(", ")}`
+      );
+    }
   }
 
   return data;

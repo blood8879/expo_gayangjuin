@@ -5,32 +5,44 @@ import {
   ScrollView,
   TextInput,
   Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { theme } from "@/constants/theme";
+import { useJournal, useCreateJournalRecord } from "@/lib/query/journalQueries";
+import { formatDateWithDay } from "@/lib/utils/dateUtils";
 
 export default function AddRecordScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [temperature, setTemperature] = useState("");
   const [humidity, setHumidity] = useState("");
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [currentDate, setCurrentDate] = useState("");
-  const [selectedStage, setSelectedStage] = useState("쌀을 불린다");
 
-  // 현재 날짜 포맷팅
-  useEffect(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    const dayOfWeek = ["일", "월", "화", "수", "목", "금", "토"][now.getDay()];
+  // 양조일지 정보 가져오기
+  const {
+    data: journal,
+    isLoading: journalLoading,
+    isError,
+  } = useJournal(id as string);
 
-    setCurrentDate(`${year}년 ${month}월 ${day}일 ${dayOfWeek}요일`);
-  }, []);
+  // 레코드 생성 훅
+  const { mutate: createRecord, isPending: isSubmitting } =
+    useCreateJournalRecord(id as string);
+
+  // 현재 일자
+  const currentDate = formatDateWithDay(new Date().toISOString());
+
+  // 양조일지에 연결된 레시피의 단계 목록
+  const recipeStages = journal?.recipes?.recipe_stages || [];
 
   // 사진 추가 기능 (실제 구현은 필요)
   const handleAddImage = () => {
@@ -47,18 +59,89 @@ export default function AddRecordScreen() {
 
   // 저장 버튼 처리
   const handleSave = () => {
-    // 여기에 저장 로직을 구현
-    // 실제로는 API 호출 또는 상태 관리를 통해 데이터 저장
-    router.back();
+    // 유효성 검사
+    if (!title.trim()) {
+      Alert.alert("알림", "제목을 입력해주세요.");
+      return;
+    }
+
+    console.log("저장할 기록 데이터:", {
+      title,
+      memo,
+      temperature: temperature ? parseFloat(temperature) : undefined,
+      humidity: humidity ? parseFloat(humidity) : undefined,
+      stage_id: selectedStageId || undefined,
+      images: images.length > 0 ? images : undefined,
+    });
+
+    // 양조일지 기록 데이터 생성
+    createRecord(
+      {
+        title,
+        memo,
+        temperature: temperature ? parseFloat(temperature) : undefined,
+        humidity: humidity ? parseFloat(humidity) : undefined,
+        stage_id: selectedStageId || undefined,
+        images: images.length > 0 ? images : undefined,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert("성공", "양조일지 기록이 저장되었습니다.", [
+            {
+              text: "확인",
+              onPress: () => router.back(),
+            },
+          ]);
+        },
+        onError: (error) => {
+          Alert.alert(
+            "오류",
+            "양조일지 기록 저장에 실패했습니다. 다시 시도해주세요."
+          );
+          console.error("양조일지 기록 저장 오류:", error);
+        },
+      }
+    );
   };
 
-  // 단계 선택 옵션
-  const stageOptions = [
-    "쌀을 불린다",
-    "죽을 쑨다.",
-    "밑술을 한다",
-    "덧술을 한다",
-  ];
+  // 선택된 단계 정보
+  const selectedStage = recipeStages.find(
+    (stage) => stage.id === selectedStageId
+  );
+
+  // 로딩 상태 표시
+  if (journalLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color={theme.primary.DEFAULT} />
+        <Text className="mt-4 text-neutral-500">
+          양조일지 정보를 불러오는 중...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  // 에러 상태 처리
+  if (isError || !journal) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
+        <View className="items-center px-4">
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text className="mt-4 text-center text-neutral-600">
+            양조일지 정보를 불러오는데 실패했습니다.
+          </Text>
+          <TouchableOpacity
+            className="mt-6 px-4 py-2 bg-primary-600 rounded-lg"
+            onPress={() => router.back()}
+          >
+            <Text className="text-white font-medium">
+              이전 화면으로 돌아가기
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -76,8 +159,13 @@ export default function AddRecordScreen() {
         <TouchableOpacity
           className="px-4 py-1.5 bg-blue-600 rounded-[12px]"
           onPress={handleSave}
+          disabled={isSubmitting}
         >
-          <Text className="text-white font-medium">저장</Text>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text className="text-white font-medium">저장</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -90,38 +178,76 @@ export default function AddRecordScreen() {
             <Text className="ml-2 text-base text-gray-800">{currentDate}</Text>
           </View>
 
+          <View className="flex-row items-center mb-4">
+            <Text className="w-16 text-base font-medium text-gray-800">
+              제목
+            </Text>
+            <TextInput
+              className="flex-1 ml-2 p-2 border border-gray-200 rounded-[8px] text-base text-gray-800 bg-white"
+              placeholder="기록 제목을 입력하세요"
+              value={title}
+              onChangeText={setTitle}
+            />
+          </View>
+
           <View className="flex-row items-center mb-2">
             <Text className="w-16 text-base font-medium text-gray-800">
               단계
             </Text>
             <View className="ml-2 flex-1">
-              <TouchableOpacity className="flex-row items-center justify-between bg-gray-100 px-3 py-2 rounded-[8px]">
-                <Text className="text-base text-gray-800">{selectedStage}</Text>
-                <Ionicons name="chevron-down" size={16} color="#666" />
+              <TouchableOpacity
+                className="flex-row items-center justify-between bg-gray-100 px-3 py-2 rounded-[8px]"
+                onPress={() => setIsStageDropdownOpen(!isStageDropdownOpen)}
+              >
+                <Text className="text-base text-gray-800">
+                  {selectedStage
+                    ? selectedStage.title ||
+                      `단계 ${selectedStage.stage_number}`
+                    : "단계를 선택해주세요"}
+                </Text>
+                <Ionicons
+                  name={isStageDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color="#666"
+                />
               </TouchableOpacity>
 
-              {/* 실제 구현에서는 모달 또는 드롭다운으로 대체 */}
-              <View className="mt-2 bg-white border border-gray-200 rounded-[8px] overflow-hidden">
-                {stageOptions.map((stage, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    className={`py-2 px-3 ${
-                      selectedStage === stage ? "bg-blue-50" : ""
-                    }`}
-                    onPress={() => setSelectedStage(stage)}
-                  >
-                    <Text
-                      className={`${
-                        selectedStage === stage
-                          ? "text-blue-600 font-medium"
-                          : "text-gray-800"
-                      }`}
-                    >
-                      {stage}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {isStageDropdownOpen && recipeStages.length > 0 && (
+                <View className="mt-2 bg-white border border-gray-200 rounded-[8px] overflow-hidden">
+                  {recipeStages
+                    .sort((a, b) => a.stage_number - b.stage_number)
+                    .map((stage) => (
+                      <TouchableOpacity
+                        key={stage.id}
+                        className={`py-2 px-3 ${
+                          selectedStageId === stage.id ? "bg-blue-50" : ""
+                        }`}
+                        onPress={() => {
+                          setSelectedStageId(stage.id as string);
+                          setIsStageDropdownOpen(false);
+                        }}
+                      >
+                        <Text
+                          className={`${
+                            selectedStageId === stage.id
+                              ? "text-blue-600 font-medium"
+                              : "text-gray-800"
+                          }`}
+                        >
+                          {stage.title || `단계 ${stage.stage_number}`}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              )}
+
+              {isStageDropdownOpen && recipeStages.length === 0 && (
+                <View className="mt-2 bg-white border border-gray-200 rounded-[8px] p-3">
+                  <Text className="text-gray-500 text-center">
+                    등록된 단계가 없습니다
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -194,11 +320,11 @@ export default function AddRecordScreen() {
         </View>
 
         <View className="p-4 bg-white mb-6">
-          <Text className="text-base font-medium text-gray-800 mb-3">메모</Text>
+          <Text className="text-base font-medium text-gray-800 mb-3">내용</Text>
 
           <TextInput
             className="w-full min-h-[120px] border border-gray-300 rounded-[8px] p-3 text-base text-gray-800"
-            placeholder="양조 과정에 대한 메모를 입력하세요..."
+            placeholder="양조 과정에 대한 내용을 입력하세요..."
             value={memo}
             onChangeText={setMemo}
             multiline

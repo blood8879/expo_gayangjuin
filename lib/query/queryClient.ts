@@ -25,3 +25,16 @@ export const recipeKeys = {
   details: () => [...recipeKeys.all, "detail"] as const,
   detail: (id: string) => [...recipeKeys.details(), id] as const,
 };
+
+// 양조일지 관련 쿼리 키
+export const journalKeys = {
+  all: ["journals"] as const,
+  lists: () => [...journalKeys.all, "list"] as const,
+  list: (userId: string) => [...journalKeys.lists(), { userId }] as const,
+  details: () => [...journalKeys.all, "detail"] as const,
+  detail: (id: string) => [...journalKeys.details(), id] as const,
+  records: (journalId: string) =>
+    [...journalKeys.detail(journalId), "records"] as const,
+  record: (journalId: string, recordId: string) =>
+    [...journalKeys.records(journalId), recordId] as const,
+};

@@ -220,23 +220,25 @@ export default function RecipeDetailScreen() {
 
           <Card elevation="none" className="p-4 bg-white rounded-[8px]">
             {recipeData.ingredients && recipeData.ingredients.length > 0 ? (
-              recipeData.ingredients.map((ingredient, index) => (
-                <View
-                  key={ingredient.id}
-                  className={`flex-row justify-between py-3 ${
-                    index < recipeData.ingredients.length - 1
-                      ? "border-b border-gray-100"
-                      : ""
-                  }`}
-                >
-                  <Text className="text-neutral-800 font-medium">
-                    {ingredient.name}
-                  </Text>
-                  <Text className="text-neutral-500">
-                    {ingredient.amount} {ingredient.unit}
-                  </Text>
-                </View>
-              ))
+              recipeData.ingredients.map(
+                (ingredient: Ingredient, index: number) => (
+                  <View
+                    key={ingredient.id}
+                    className={`flex-row justify-between py-3 ${
+                      index < recipeData.ingredients.length - 1
+                        ? "border-b border-gray-100"
+                        : ""
+                    }`}
+                  >
+                    <Text className="text-neutral-800 font-medium">
+                      {ingredient.name}
+                    </Text>
+                    <Text className="text-neutral-500">
+                      {ingredient.amount} {ingredient.unit}
+                    </Text>
+                  </View>
+                )
+              )
             ) : (
               <Text className="text-neutral-500 py-3 text-center">
                 등록된 재료가 없습니다
@@ -254,7 +256,7 @@ export default function RecipeDetailScreen() {
           </View>
 
           {recipeData.steps && recipeData.steps.length > 0 ? (
-            recipeData.steps.map((step, index) => (
+            recipeData.steps.map((step: Step, index: number) => (
               <Card
                 key={step.id}
                 elevation="none"
@@ -372,7 +374,12 @@ export default function RecipeDetailScreen() {
       {/* 하단 버튼 영역 */}
       <View className="px-5 py-4 border-t border-gray-100 bg-white">
         <View className="flex-row">
-          <TouchableOpacity className="flex-1 mr-3">
+          <TouchableOpacity
+            className="flex-1 mr-3"
+            onPress={() =>
+              router.push(`/journals/create?recipe_id=${recipeData.id}`)
+            }
+          >
             <Card elevation="none" className="p-4 bg-emerald-50 rounded-[8px]">
               <Text className="text-center font-medium text-emerald-700">
                 양조일지 시작하기
