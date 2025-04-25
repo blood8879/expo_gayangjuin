@@ -122,14 +122,33 @@ export async function saveSteps(steps: Omit<Step, "id" | "created_at">[]) {
  * 레시피 목록 조회 함수
  */
 export async function getRecipes() {
+  console.log("레시피 목록 조회 요청");
+
   const { data, error } = await supabase
     .from("recipes")
-    .select("*")
+    .select(
+      `
+      *,
+      recipe_stages(*)
+    `
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
     console.error("레시피 목록 조회 에러:", error);
     throw error;
+  }
+
+  // 결과 데이터 디버깅
+  if (data) {
+    console.log(`총 ${data.length}개의 레시피를 로드했습니다.`);
+    data.forEach((recipe) => {
+      console.log(
+        `레시피 ID: ${recipe.id}, 이름: ${recipe.name}, 단계 수: ${
+          recipe.recipe_stages?.length || 0
+        }`
+      );
+    });
   }
 
   return data;

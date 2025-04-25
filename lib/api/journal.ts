@@ -350,21 +350,15 @@ export async function uploadJournalImage(
 }
 
 /**
- * 테이블 목록 조회 함수 추가
+ * 데이터베이스 테이블 목록 조회 함수 (디버깅용)
+ * 현재 미사용 - 데이터베이스에 해당 함수가 존재하지 않기 때문에 오류 발생
  */
 export async function listTables() {
   try {
-    const { data, error } = await supabase.rpc("list_tables");
-
-    if (error) {
-      console.error("테이블 목록 조회 에러:", error);
-      return null;
-    }
-
-    console.log("사용 가능한 테이블:", data);
-    return data;
+    console.log("테이블 목록 조회 시도 - 이 기능은 현재 지원되지 않습니다.");
+    return [];
   } catch (e) {
-    console.error("테이블 목록 조회 중 오류 발생:", e);
-    return null;
+    console.error("테이블 목록 조회 시도 중 오류 발생 (무시됨):", e);
+    return [];
   }
 }

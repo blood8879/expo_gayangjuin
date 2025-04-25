@@ -27,8 +27,8 @@ export function useJournals() {
   return useQuery({
     queryKey: ["journals", user?.id],
     queryFn: async () => {
-      // 데이터베이스 테이블 목록 조회 (디버깅용)
-      await listTables();
+      // 디버깅 메시지만 출력
+      console.log("양조일지 데이터 조회 중...");
 
       return getJournals();
     },

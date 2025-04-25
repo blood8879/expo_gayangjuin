@@ -57,6 +57,7 @@ export default function JournalCreateScreen() {
   );
   const [isRecipeOpen, setIsRecipeOpen] = useState(false);
   const [isStageOpen, setIsStageOpen] = useState(false);
+  const [stages, setStages] = useState<RecipeStage[]>([]);
 
   // 레시피 목록 가져오기
   const { data: recipes, isLoading: recipesLoading } = useRecipes();
@@ -72,31 +73,98 @@ export default function JournalCreateScreen() {
       if (recipe) {
         setSelectedRecipeId(recipe.id);
         console.log(`URL에서 레시피 ID ${recipe.id}를 자동 선택했습니다`);
+
+        // 해당 레시피의 단계 데이터도 설정
+        if (recipe.recipe_stages && recipe.recipe_stages.length > 0) {
+          setStages(recipe.recipe_stages);
+          console.log(
+            `레시피에서 ${recipe.recipe_stages.length}개의 단계 정보 로드됨`
+          );
+        }
       }
     }
   }, [params.recipe_id, recipes]);
 
+  // 레시피 선택 변경 시 단계 데이터 업데이트
+  useEffect(() => {
+    if (selectedRecipeId && recipes) {
+      const selectedRecipe = recipes.find(
+        (r: Recipe) => r.id === selectedRecipeId
+      );
+      if (selectedRecipe) {
+        // 추가적인 디버깅 로그
+        console.log(
+          `선택된 레시피 ID: ${selectedRecipeId}, 이름: ${selectedRecipe.name}`
+        );
+
+        if (
+          selectedRecipe.recipe_stages &&
+          Array.isArray(selectedRecipe.recipe_stages)
+        ) {
+          console.log(
+            `단계 정보 확인: ${selectedRecipe.recipe_stages.length}개의 단계 발견`
+          );
+          // 단계 정보 자세히 로깅
+          selectedRecipe.recipe_stages.forEach(
+            (stage: RecipeStage, index: number) => {
+              console.log(
+                `단계 ${index + 1}: ID=${stage.id}, 번호=${
+                  stage.stage_number
+                }, 제목=${stage.title || "없음"}`
+              );
+            }
+          );
+
+          // 단계 정보를 상태에 설정
+          setStages(selectedRecipe.recipe_stages);
+        } else {
+          console.log(
+            `레시피에 단계 정보가 없거나 형식이 올바르지 않습니다:`,
+            selectedRecipe.recipe_stages
+          );
+          setStages([]);
+        }
+      } else {
+        console.log(`ID가 ${selectedRecipeId}인 레시피를 찾을 수 없습니다`);
+        setStages([]);
+      }
+    } else {
+      setStages([]);
+    }
+  }, [selectedRecipeId, recipes]);
+
   // 색상 설정
   const recipeColors: Record<string, RecipeColorInfo> = {
-    막걸리: {
-      bg: "#e7f7ee",
-      text: "#56bb7f",
-      icon: "beer-outline",
-    },
-    과실주: {
-      bg: "#ffeee6",
-      text: "#e8845e",
-      icon: "leaf-outline",
-    },
-    "약주/청주": {
+    "rice-wine": {
       bg: "#f4e8ff",
       text: "#a47ad1",
       icon: "flask-outline",
     },
-    전통주: {
+    "fruit-wine": {
+      bg: "#ffeee6",
+      text: "#e8845e",
+      icon: "leaf-outline",
+    },
+    "traditional-wine": {
       bg: "#e6f2fe",
       text: "#4a91db",
       icon: "wine-outline",
+    },
+    makgeolli: {
+      bg: "#e7f7ee",
+      text: "#56bb7f",
+      icon: "beer-outline",
+    },
+    "clear-wine": {
+      bg: "#f4e8ff",
+      text: "#a47ad1",
+      icon: "flask-outline",
+    },
+    // 한글 키도 추가
+    막걸리: {
+      bg: "#e7f7ee",
+      text: "#56bb7f",
+      icon: "beer-outline",
     },
   };
 
@@ -105,21 +173,58 @@ export default function JournalCreateScreen() {
     (r: Recipe) => r.id === selectedRecipeId
   );
 
-  // 선택한 레시피의 단계들
-  const recipeStages = selectedRecipe?.recipe_stages || [];
-
   // 선택된 단계 정보
-  const selectedStage = recipeStages.find(
+  const selectedStage = stages.find(
     (s: RecipeStage) => s.stage_number === selectedStageNumber
   );
 
   // 선택한 레시피의 색상 정보 가져오기
+  const getRecipeTypeColor = (typeValue?: string): RecipeColorInfo => {
+    if (!typeValue) return recipeColors["traditional-wine"];
+
+    // 타입 정제 (공백 제거)
+    const type = typeValue.trim();
+
+    // type이 recipeColors에 있는지 확인
+    if (type in recipeColors) {
+      return recipeColors[type];
+    }
+
+    // 한글 "막걸리" 체크 - makgeolli와 동일
+    if (type.includes("막걸리")) {
+      return recipeColors["makgeolli"];
+    }
+
+    // 없으면 기본값 반환
+    return recipeColors["traditional-wine"];
+  };
+
   const getRecipeColorInfo = (): RecipeColorInfo => {
-    if (!selectedRecipe) return recipeColors["전통주"];
-    const type = selectedRecipe.type || "전통주";
-    return (
-      recipeColors[type as keyof typeof recipeColors] || recipeColors["전통주"]
+    if (!selectedRecipe) return recipeColors["traditional-wine"];
+
+    // 레시피 타입을 정확히 사용하되 공백 제거
+    const rawType = selectedRecipe.type || "traditional-wine";
+    const type = rawType.trim();
+
+    // 디버깅 로그 추가
+    console.log(
+      `레시피 타입: "${rawType}" -> 정제된 타입: "${type}", 사용 가능한 타입:`,
+      Object.keys(recipeColors).join(", ")
     );
+
+    // 공통 함수 사용
+    const colorInfo = getRecipeTypeColor(type);
+
+    // 로그 출력
+    if (type in recipeColors) {
+      console.log(`${type} 타입에 맞는 색상 정보 사용`);
+    } else if (type.includes("막걸리")) {
+      console.log(`"막걸리" 타입 감지, 매핑된 색상 정보 사용`);
+    } else {
+      console.log(`${type} 타입에 맞는 색상 정보가 없어 기본값 사용`);
+    }
+
+    return colorInfo;
   };
 
   const colorInfo = getRecipeColorInfo();
@@ -147,7 +252,7 @@ export default function JournalCreateScreen() {
         id: selectedRecipe.id,
         name: selectedRecipe.name,
         type: selectedRecipe.type,
-        stages: recipeStages.length,
+        stages: stages.length,
       });
     }
 
@@ -309,30 +414,31 @@ export default function JournalCreateScreen() {
                         setSelectedRecipeId(recipe.id);
                         setSelectedStageNumber(null);
                         setIsRecipeOpen(false);
+
+                        // 선택된 레시피의 단계 데이터 설정
+                        if (recipe.recipe_stages) {
+                          setStages(recipe.recipe_stages);
+                          console.log(
+                            `'${recipe.name}' 레시피 선택됨, 단계 ${recipe.recipe_stages.length}개 로드`
+                          );
+                        } else {
+                          setStages([]);
+                          console.log(
+                            `'${recipe.name}' 레시피 선택됨, 단계 데이터 없음`
+                          );
+                        }
                       }}
                     >
                       <View
                         style={{
-                          backgroundColor:
-                            recipeColors[
-                              recipe.type as keyof typeof recipeColors
-                            ]?.bg || recipeColors["전통주"].bg,
+                          backgroundColor: getRecipeTypeColor(recipe.type).bg,
                         }}
                         className="w-7 h-7 rounded-full items-center justify-center mr-3"
                       >
                         <Ionicons
-                          name={
-                            (recipeColors[
-                              recipe.type as keyof typeof recipeColors
-                            ]?.icon as any) ||
-                            (recipeColors["전통주"].icon as any)
-                          }
+                          name={getRecipeTypeColor(recipe.type).icon as any}
                           size={16}
-                          color={
-                            recipeColors[
-                              recipe.type as keyof typeof recipeColors
-                            ]?.text || recipeColors["전통주"].text
-                          }
+                          color={getRecipeTypeColor(recipe.type).text}
                         />
                       </View>
                       <View>
@@ -341,6 +447,8 @@ export default function JournalCreateScreen() {
                         </Text>
                         <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
                           {recipe.type || "기타"}
+                          {recipe.recipe_stages &&
+                            ` • ${recipe.recipe_stages.length}단계`}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -361,7 +469,8 @@ export default function JournalCreateScreen() {
         {selectedRecipeId && (
           <View className="mb-6">
             <Text className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-2">
-              현재 단계 선택
+              현재 단계 선택{" "}
+              {stages.length > 0 ? `(${stages.length}단계)` : "(단계 없음)"}
             </Text>
             <TouchableOpacity
               style={{
@@ -374,68 +483,68 @@ export default function JournalCreateScreen() {
                     : theme.neutral[200],
               }}
               className="p-3 rounded-[12px] border-[0.5px] flex-row justify-between items-center"
-              onPress={() => setIsStageOpen(!isStageOpen)}
+              onPress={() => {
+                if (stages.length > 0) {
+                  setIsStageOpen(!isStageOpen);
+                } else {
+                  Alert.alert("알림", "이 레시피에는 단계가 없습니다.");
+                }
+              }}
             >
               <Text className="text-neutral-900 dark:text-neutral-200">
                 {selectedStage
                   ? selectedStage.title || `단계 ${selectedStage.stage_number}`
-                  : "단계를 선택해주세요"}
+                  : stages.length > 0
+                  ? "단계를 선택해주세요"
+                  : "이 레시피에는 단계가 없습니다"}
               </Text>
-              <Ionicons
-                name={isStageOpen ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={theme.neutral[400]}
-              />
+              {stages.length > 0 && (
+                <Ionicons
+                  name={isStageOpen ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={theme.neutral[400]}
+                />
+              )}
             </TouchableOpacity>
 
             {/* 단계 선택 드롭다운 메뉴 */}
-            {isStageOpen && (
+            {isStageOpen && stages.length > 0 && (
               <View className="mt-2 bg-white dark:bg-neutral-800 rounded-[12px] border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-                {recipeStages.length > 0 ? (
-                  recipeStages
-                    .sort(
-                      (a: RecipeStage, b: RecipeStage) =>
-                        a.stage_number - b.stage_number
-                    )
-                    .map((stage: RecipeStage) => (
-                      <TouchableOpacity
-                        key={stage.id}
-                        className={`p-3 border-b border-neutral-100 dark:border-neutral-700 ${
-                          selectedStageNumber === stage.stage_number
-                            ? "bg-neutral-100 dark:bg-neutral-700"
-                            : ""
-                        }`}
-                        onPress={() => {
-                          setSelectedStageNumber(stage.stage_number);
-                          setIsStageOpen(false);
-                        }}
-                      >
-                        <View className="flex-row items-center">
-                          <View className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-700 items-center justify-center mr-2">
-                            <Text className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                              {stage.stage_number}
-                            </Text>
-                          </View>
-                          <View>
-                            <Text className="text-neutral-900 dark:text-neutral-100">
-                              {stage.title || `단계 ${stage.stage_number}`}
-                            </Text>
-                            <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
-                              {stage.duration_days > 0
-                                ? `${stage.duration_days}일`
-                                : "기간 미설정"}
-                            </Text>
-                          </View>
+                {stages
+                  .sort((a, b) => a.stage_number - b.stage_number)
+                  .map((stage) => (
+                    <TouchableOpacity
+                      key={stage.id}
+                      className={`p-3 border-b border-neutral-100 dark:border-neutral-700 ${
+                        selectedStageNumber === stage.stage_number
+                          ? "bg-neutral-100 dark:bg-neutral-700"
+                          : ""
+                      }`}
+                      onPress={() => {
+                        setSelectedStageNumber(stage.stage_number);
+                        setIsStageOpen(false);
+                        console.log(`단계 ${stage.stage_number} 선택됨`);
+                      }}
+                    >
+                      <View className="flex-row items-center">
+                        <View className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-700 items-center justify-center mr-2">
+                          <Text className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                            {stage.stage_number}
+                          </Text>
                         </View>
-                      </TouchableOpacity>
-                    ))
-                ) : (
-                  <View className="p-4 items-center">
-                    <Text className="text-neutral-500 dark:text-neutral-400">
-                      단계가 없습니다.
-                    </Text>
-                  </View>
-                )}
+                        <View>
+                          <Text className="text-neutral-900 dark:text-neutral-100">
+                            {stage.title || `단계 ${stage.stage_number}`}
+                          </Text>
+                          <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
+                            {stage.duration_days > 0
+                              ? `${stage.duration_days}일`
+                              : "기간 미설정"}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
               </View>
             )}
           </View>
