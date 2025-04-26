@@ -1,3 +1,4 @@
+import React from "react";
 import {
   View,
   Text,
@@ -12,11 +13,40 @@ import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/constants/theme";
-import { useJournal, useDeleteJournal } from "@/lib/query/journalQueries";
+import {
+  useJournal,
+  useDeleteJournal,
+  useUpdateJournal,
+} from "@/lib/query/journalQueries";
 import { formatDetailDate, formatDate } from "@/lib/utils/dateUtils";
+import StageList from "@/components/journal/StageList";
+import StageItem from "@/components/journal/StageItem";
+import StageIndicator from "@/components/journal/StageIndicator";
+import RecipeStages from "@/components/journal/RecipeStages";
+
+// RecipeStage 타입 정의 추가
+interface RecipeStage {
+  id: string | number;
+  stage_number: number;
+  title?: string;
+  description?: string;
+  duration_days: number;
+}
 
 // 단계 상태를 나타내는 타입
 type StageStatus = "current" | "completed" | "upcoming";
+
+// 기록 데이터 타입 정의
+interface JournalRecord {
+  id: string | number;
+  title: string;
+  description?: string;
+  temperature?: number;
+  humidity?: number;
+  created_at: string;
+  stage_id?: string | number;
+  journal_images?: Array<{ url: string; image_url: string }>;
+}
 
 export default function JournalDetailScreen() {
   const router = useRouter();
@@ -27,6 +57,41 @@ export default function JournalDetailScreen() {
 
   // 양조일지 삭제 훅
   const { mutate: deleteJournal, isPending: isDeleting } = useDeleteJournal();
+
+  // 양조일지 업데이트 훅
+  const { mutate: updateJournal, isPending: isUpdating } = useUpdateJournal();
+
+  // 단계 변경 처리 함수
+  const handleStageChange = (stageNumber: number) => {
+    if (journal?.current_stage === stageNumber) return;
+
+    Alert.alert("단계 변경", `${stageNumber}단계로 변경하시겠습니까?`, [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "변경",
+        onPress: () => {
+          updateJournal(
+            {
+              id: id as string,
+              journal: { current_stage: stageNumber },
+            },
+            {
+              onSuccess: () => {
+                Alert.alert("성공", `${stageNumber}단계로 변경되었습니다.`);
+              },
+              onError: (error) => {
+                Alert.alert("오류", "단계 변경에 실패했습니다.");
+                console.error("단계 변경 오류:", error);
+              },
+            }
+          );
+        },
+      },
+    ]);
+  };
 
   // 삭제 처리 함수
   const handleDelete = () => {
@@ -92,21 +157,18 @@ export default function JournalDetailScreen() {
   // 저널 기록
   const journalRecords = journal.journal_records || [];
 
-  // 현재 단계 (stage_id 기반)
-  const currentStageId = journal.stage_id;
+  // 현재 단계 (current_stage 기반)
+  const currentStageNumber = journal.current_stage;
 
   // 단계 상태 확인 함수 (현재, 완료, 예정)
-  const getStageStatus = (stageId: string): StageStatus => {
-    if (stageId === currentStageId) return "current";
+  const getStageStatus = (stageNumber: number): StageStatus => {
+    if (!journal || !journal.current_stage) return "upcoming";
 
-    const currentStage = recipeStages.find((s) => s.id === currentStageId);
-    const stage = recipeStages.find((s) => s.id === stageId);
+    const currentStage = journal.current_stage;
 
-    if (!currentStage || !stage) return "upcoming";
+    if (stageNumber === currentStage) return "current";
 
-    return currentStage.stage_number > stage.stage_number
-      ? "completed"
-      : "upcoming";
+    return stageNumber < currentStage ? "completed" : "upcoming";
   };
 
   return (
@@ -158,52 +220,17 @@ export default function JournalDetailScreen() {
         </View>
 
         {recipeStages.length > 0 && (
-          <View className="bg-white py-4 px-4 border-b border-gray-200">
-            <View className="mb-4">
-              <Text className="text-base font-semibold text-gray-800">
-                레시피 단계
-              </Text>
-              <Text className="text-xs text-gray-500 mt-1">
-                현재 진행 중인 단계를 확인할 수 있습니다
-              </Text>
-            </View>
-
-            {recipeStages
-              .sort((a, b) => a.stage_number - b.stage_number)
-              .map((stage) => {
-                const status = getStageStatus(stage.id as string);
-                return (
-                  <View key={stage.id} className="flex-row items-center mb-4">
-                    <View
-                      className={`w-8 h-8 rounded-full items-center justify-center ${
-                        status === "current"
-                          ? "bg-blue-600"
-                          : status === "completed"
-                          ? "bg-green-500"
-                          : "bg-gray-200"
-                      }`}
-                    >
-                      <Text
-                        className={`text-base font-bold ${
-                          status === "upcoming" ? "text-gray-600" : "text-white"
-                        }`}
-                      >
-                        {stage.stage_number}
-                      </Text>
-                    </View>
-                    <View className="ml-3">
-                      <Text className="text-sm font-medium text-gray-800">
-                        {stage.title || `단계 ${stage.stage_number}`}
-                      </Text>
-                      <Text className="text-xs text-gray-500 mt-0.5">
-                        {stage.duration_days > 0
-                          ? `${stage.duration_days}일`
-                          : "기간 미설정"}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
+          <View className="bg-white border-b border-gray-200">
+            {/* RecipeStages 컴포넌트 사용 */}
+            <RecipeStages
+              stages={recipeStages.map((stage: RecipeStage) => ({
+                stage_number: stage.stage_number,
+                title: stage.title,
+                duration_days: stage.duration_days,
+              }))}
+              currentStage={journal.current_stage || 0}
+              onStagePress={handleStageChange}
+            />
           </View>
         )}
 
@@ -242,14 +269,14 @@ export default function JournalDetailScreen() {
           ) : (
             journalRecords
               .sort(
-                (a, b) =>
+                (a: JournalRecord, b: JournalRecord) =>
                   new Date(b.created_at).getTime() -
                   new Date(a.created_at).getTime()
               )
-              .map((record) => {
+              .map((record: JournalRecord) => {
                 // 기록과 관련된 단계 정보
                 const relatedStage = recipeStages.find(
-                  (stage) => stage.id === record.stage_id
+                  (stage: RecipeStage) => stage.id === record.stage_id
                 );
 
                 return (

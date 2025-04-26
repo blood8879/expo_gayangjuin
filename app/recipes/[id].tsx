@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { theme } from "@/constants/theme";
 import { Card } from "@/components/ui/Card";
 import { useRecipe } from "@/lib/query/recipeQueries";
+import { useJournals } from "@/lib/query/journalQueries";
 
 // 타입 정의 추가
 interface Ingredient {
@@ -57,6 +58,16 @@ export default function RecipeDetailScreen() {
 
   // React Query 사용
   const { data: recipe, isLoading, isError, error } = useRecipe(id as string);
+
+  // 모든 양조일지 목록 조회
+  const { data: allJournals } = useJournals();
+
+  // 이 레시피를 사용하는 양조일지만 필터링
+  const journals = allJournals?.filter((journal) => journal.recipe_id === id);
+
+  // 현재 진행 중인 양조일지와 해당 단계 찾기
+  const activeJournal = journals?.find((journal) => !journal.is_completed);
+  const currentStage = activeJournal?.current_stage;
 
   // 로딩 화면
   if (isLoading) {
@@ -253,52 +264,116 @@ export default function RecipeDetailScreen() {
             <Text className="text-lg font-bold text-neutral-800">
               양조 단계
             </Text>
+            <View className="flex-row items-center bg-emerald-100 px-3 py-1.5 rounded-full">
+              <Text className="text-xs font-medium text-emerald-700">
+                {`총 ${recipeData.steps.length}단계 양조법`}
+              </Text>
+            </View>
           </View>
 
           {recipeData.steps && recipeData.steps.length > 0 ? (
-            recipeData.steps.map((step: Step, index: number) => (
-              <Card
-                key={step.id}
-                elevation="none"
-                className="mb-4 overflow-hidden bg-white rounded-[8px]"
-              >
-                <View className="p-4">
-                  <View className="flex-row items-center mb-2">
-                    <View className="w-7 h-7 rounded-full items-center justify-center bg-emerald-100">
-                      <Text className="text-xs font-bold text-emerald-700">
-                        {step.order}
-                      </Text>
+            <View className="relative">
+              {/* 단계 진행 라인 */}
+              <View className="absolute left-[22px] top-10 bottom-4 w-1 bg-gray-200" />
+
+              {recipeData.steps.map((step: Step, index: number) => (
+                <Card
+                  key={step.id}
+                  elevation="none"
+                  className="mb-4 overflow-hidden bg-white rounded-[8px] border-l-4"
+                  style={{
+                    borderLeftColor:
+                      step.order === 1
+                        ? "#22c55e" // 첫 번째 단계는 초록색
+                        : step.order === 2
+                        ? "#3b82f6" // 두 번째 단계는 파란색
+                        : "#9ca3af", // 그 외는 회색
+                  }}
+                >
+                  <View className="p-4">
+                    <View className="flex-row items-center mb-2">
+                      <View
+                        className={`w-8 h-8 rounded-full items-center justify-center ${
+                          step.order === 1
+                            ? "bg-emerald-100 border-2 border-emerald-500"
+                            : step.order === 2
+                            ? "bg-blue-100 border-2 border-blue-500"
+                            : "bg-gray-100"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            step.order === 1
+                              ? "text-emerald-700"
+                              : step.order === 2
+                              ? "text-blue-700"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {step.order}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-3">
+                        <Text className="text-base font-semibold text-neutral-800">
+                          {step.title}
+                        </Text>
+                        {/* 현재 진행중인 단계 표시 - 실제 current_stage 값과 비교 */}
+                        {activeJournal &&
+                          currentStage &&
+                          step.id.toString() === currentStage.toString() && (
+                            <View className="flex-row items-center mt-1">
+                              <View
+                                className={`w-2 h-2 rounded-full ${
+                                  step.order === 1
+                                    ? "bg-emerald-500"
+                                    : "bg-blue-500"
+                                }`}
+                              />
+                              <Text
+                                className={`text-xs ml-1 ${
+                                  step.order === 1
+                                    ? "text-emerald-700"
+                                    : "text-blue-700"
+                                }`}
+                              >
+                                {`${step.order}단계 진행중`}
+                              </Text>
+                            </View>
+                          )}
+                      </View>
+                      {/* 기간 배지 */}
+                      {step.days > 0 && (
+                        <View
+                          className={`px-2 py-1 rounded-full ${
+                            step.order === 1
+                              ? "bg-emerald-50"
+                              : step.order === 2
+                              ? "bg-blue-50"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          <Text
+                            className={`text-xs font-medium ${
+                              step.order === 1
+                                ? "text-emerald-600"
+                                : step.order === 2
+                                ? "text-blue-600"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {step.days}일
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <Text className="text-base font-semibold text-neutral-800 ml-3">
-                      {step.title}
+
+                    <Text className="text-neutral-600 ml-11">
+                      {step.description}
                     </Text>
                   </View>
-
-                  <Text className="text-neutral-600 ml-10">
-                    {step.description}
-                  </Text>
-
-                  {step.days > 0 && (
-                    <Text className="text-neutral-500 ml-10 mt-2 text-xs">
-                      소요 기간: {step.days}일
-                    </Text>
-                  )}
-
-                  {/* <View className="flex-row mt-4 ml-10">
-                    <TouchableOpacity className="flex-row items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                      <Ionicons
-                        name="camera-outline"
-                        size={16}
-                        color={theme.neutral[500]}
-                      />
-                      <Text className="ml-1 text-xs text-neutral-600">
-                        참고 사진
-                      </Text>
-                    </TouchableOpacity>
-                  </View> */}
-                </View>
-              </Card>
-            ))
+                </Card>
+              ))}
+            </View>
           ) : (
             <Card elevation="none" className="p-4 bg-white rounded-[8px]">
               <Text className="text-neutral-500 py-3 text-center">
