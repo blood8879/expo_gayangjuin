@@ -28,10 +28,10 @@ export interface JournalRecord {
 // 양조일지 이미지 인터페이스
 export interface JournalImage {
   id?: string;
-  journal_id: string;
   journal_entry_id: string; // record_id -> journal_entry_id로 변경
   image_url: string;
   created_at?: string;
+  description?: string; // 스키마에 description 컬럼 추가됨
 }
 
 // UI에서 사용하는 양조일지 데이터 타입

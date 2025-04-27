@@ -24,6 +24,7 @@ import { formatDateWithDay } from "@/lib/utils/dateUtils";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { decode } from "base64-arraybuffer";
 
 // 레시피 단계 타입 정의
 interface RecipeStage {
@@ -120,10 +121,11 @@ export default function AddRecordScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true, // Base64 데이터 요청
     });
 
-    if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      setImages([...images, result.assets[0].base64]);
     }
   };
 
@@ -143,10 +145,11 @@ export default function AddRecordScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true, // Base64 데이터 요청
     });
 
-    if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      setImages([...images, result.assets[0].base64]);
     }
   };
 
@@ -158,37 +161,64 @@ export default function AddRecordScreen() {
   };
 
   // 이미지를 supabase storage에 업로드하는 함수
-  const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
+  const uploadImageToSupabase = async (
+    base64String: string
+  ): Promise<string | null> => {
     try {
+      console.log(
+        "Base64 데이터로 업로드 시작 (길이:",
+        base64String.length,
+        ")"
+      );
+
       // 파일 이름 생성 (고유한 이름 보장)
       const fileName = `${Date.now()}_${Math.random()
         .toString(36)
         .substring(7)}`;
-      const fileExt = uri.split(".").pop();
+      // Base64 문자열에서 파일 확장자 추정 (간단한 방식, 완벽하지 않음)
+      let fileExt = "jpeg"; // 기본값
+      if (base64String.startsWith("data:image/png")) fileExt = "png";
+      else if (base64String.startsWith("data:image/gif")) fileExt = "gif";
+
       const filePath = `${user?.id}/${id}/${fileName}.${fileExt}`;
+      console.log("업로드 경로:", filePath);
 
-      // 이미지 파일 가져오기
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // Base64 디코딩하여 ArrayBuffer 생성
+      const arrayBuffer = decode(base64String);
+      console.log("ArrayBuffer 생성 완료, 크기:", arrayBuffer.byteLength);
 
-      // Base64 변환없이 바로 blob으로 업로드
+      // Supabase storage 업로드 (ArrayBuffer 사용)
+      console.log("Supabase storage 업로드 시작:", "journal-images");
       const { data, error } = await supabase.storage
         .from("journal-images")
-        .upload(filePath, blob);
+        .upload(filePath, arrayBuffer, {
+          contentType: `image/${fileExt}`, // 파일 타입 명시
+          upsert: false,
+        });
 
       if (error) {
-        console.error("이미지 업로드 에러:", error);
+        console.error("이미지 업로드 에러 상세:", JSON.stringify(error));
         return null;
       }
+
+      console.log("업로드 성공, 결과:", data);
 
       // 업로드된 이미지의 공개 URL 가져오기
       const { data: publicURL } = supabase.storage
         .from("journal-images")
         .getPublicUrl(filePath);
 
+      console.log("공개 URL 생성:", publicURL);
       return publicURL.publicUrl;
     } catch (error) {
       console.error("이미지 업로드 중 오류 발생:", error);
+      if (error instanceof Error) {
+        console.error("에러 메시지:", error.message);
+        console.error("에러 스택:", error.stack);
+      } else {
+        console.error("에러 타입:", typeof error);
+        console.error("에러 값:", JSON.stringify(error));
+      }
       return null;
     }
   };
@@ -229,26 +259,34 @@ export default function AddRecordScreen() {
             let uploadSuccess = true;
             const uploadPromises = [];
 
-            // 각 이미지 업로드 처리
-            for (const imageUri of images) {
+            // 각 이미지 업로드 처리 (이제 image는 base64 문자열)
+            for (const imageBase64 of images) {
               try {
-                const uploadedUrl = await uploadImageToSupabase(imageUri);
+                const uploadedUrl = await uploadImageToSupabase(imageBase64);
 
                 if (uploadedUrl) {
                   // 업로드된 이미지와 기록 연결
                   const imageData = {
-                    journal_id: id as string,
                     journal_entry_id: createdRecord.id,
                     image_url: uploadedUrl,
                   };
                   console.log("저장할 이미지 데이터:", imageData); // 이미지 데이터 확인 로그
                   uploadPromises.push(saveImage(imageData));
                 } else {
-                  console.warn("이미지 업로드 실패:", imageUri);
+                  console.warn(
+                    "이미지 업로드 실패 (Base64 길이:",
+                    imageBase64.length,
+                    ")"
+                  );
                   uploadSuccess = false;
                 }
               } catch (err) {
-                console.error("이미지 처리 중 오류:", imageUri, err);
+                console.error(
+                  "이미지 처리 중 오류 (Base64 길이:",
+                  imageBase64.length,
+                  "):",
+                  err
+                );
                 uploadSuccess = false;
               }
             }
@@ -483,10 +521,10 @@ export default function AddRecordScreen() {
           <Text className="text-base font-medium text-gray-800 mb-3">사진</Text>
 
           <View className="flex-row flex-wrap">
-            {images.map((image, index) => (
+            {images.map((imageBase64, index) => (
               <View key={index} className="w-1/3 aspect-square p-1 relative">
                 <Image
-                  source={{ uri: image }}
+                  source={{ uri: `data:image/jpeg;base64,${imageBase64}` }} // Base64 URI 형식 사용
                   className="w-full h-full rounded-[8px]"
                 />
                 <TouchableOpacity
