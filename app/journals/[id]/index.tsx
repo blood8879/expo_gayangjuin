@@ -39,12 +39,14 @@ type StageStatus = "current" | "completed" | "upcoming";
 // 기록 데이터 타입 정의
 interface JournalRecord {
   id: string | number;
-  title: string;
-  description?: string;
+  journal_id: string;
+  note?: string;
   temperature?: number;
-  humidity?: number;
+  gravity?: number;
+  stage?: number;
   created_at: string;
-  stage_id?: string | number;
+  updated_at?: string;
+  entry_date?: string;
   journal_images?: Array<{ url: string; image_url: string }>;
 }
 
@@ -155,7 +157,7 @@ export default function JournalDetailScreen() {
   const recipeStages = journal.recipes?.recipe_stages || [];
 
   // 저널 기록
-  const journalRecords = journal.journal_records || [];
+  const journalRecords = journal.journal_entries || [];
 
   // 현재 단계 (current_stage 기반)
   const currentStageNumber = journal.current_stage;
@@ -276,7 +278,7 @@ export default function JournalDetailScreen() {
               .map((record: JournalRecord) => {
                 // 기록과 관련된 단계 정보
                 const relatedStage = recipeStages.find(
-                  (stage: RecipeStage) => stage.id === record.stage_id
+                  (stage: RecipeStage) => stage.stage_number === record.stage
                 );
 
                 return (
@@ -289,29 +291,28 @@ export default function JournalDetailScreen() {
                         {formatDate(record.created_at).slice(5)}{" "}
                         {/* 월-일만 표시 */}
                       </Text>
-                      {relatedStage && (
+                      {record.stage && recipeStages.length > 0 && (
                         <>
                           <Text className="text-xs text-gray-500 my-1">
-                            {relatedStage.stage_number}단계
+                            {record.stage}단계
                           </Text>
-                          <Text className="text-sm text-blue-600">
-                            {relatedStage.title ||
-                              `단계 ${relatedStage.stage_number}`}
-                          </Text>
+                          {relatedStage && (
+                            <Text className="text-sm text-blue-600">
+                              {relatedStage.title ||
+                                `단계 ${relatedStage.stage_number}`}
+                            </Text>
+                          )}
                         </>
                       )}
                     </View>
 
                     <View className="flex-1 bg-blue-50 border-l-2 border-blue-600">
                       <View className="px-4 py-4">
-                        <Text className="text-xs text-gray-500 mb-1">
+                        <Text className="text-xs text-gray-500 mb-2">
                           {formatDetailDate(record.created_at)}
                         </Text>
-                        <Text className="text-base font-bold text-gray-800 mb-3">
-                          {record.title}
-                        </Text>
 
-                        {(record.temperature || record.humidity) && (
+                        {(record.temperature || record.gravity) && (
                           <View className="flex-row bg-white rounded-lg p-3 mb-3">
                             {record.temperature && (
                               <View className="flex-1 items-center">
@@ -328,7 +329,7 @@ export default function JournalDetailScreen() {
                                 </Text>
                               </View>
                             )}
-                            {record.humidity && (
+                            {record.gravity && (
                               <View className="flex-1 items-center">
                                 <Ionicons
                                   name="water-outline"
@@ -336,24 +337,26 @@ export default function JournalDetailScreen() {
                                   color="#4D79FF"
                                 />
                                 <Text className="text-xs text-gray-500 mt-1">
-                                  습도
+                                  비중
                                 </Text>
                                 <Text className="text-base font-semibold text-gray-800 mt-0.5">
-                                  {record.humidity}%
+                                  {record.gravity}
                                 </Text>
                               </View>
                             )}
                           </View>
                         )}
 
-                        {record.description && (
+                        {record.note && (
                           <View className="mb-3">
-                            <Text className="text-sm font-medium text-gray-500 mb-1">
+                            <Text className="text-sm font-medium text-gray-700 mb-1">
                               내용
                             </Text>
-                            <Text className="text-sm text-gray-800 leading-5">
-                              {record.description}
-                            </Text>
+                            <View className="bg-white p-3 rounded-lg">
+                              <Text className="text-sm text-gray-800 leading-5">
+                                {record.note}
+                              </Text>
+                            </View>
                           </View>
                         )}
 

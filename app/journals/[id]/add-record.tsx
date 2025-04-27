@@ -16,13 +16,21 @@ import { theme } from "@/constants/theme";
 import { useJournal, useCreateJournalRecord } from "@/lib/query/journalQueries";
 import { formatDateWithDay } from "@/lib/utils/dateUtils";
 
+// 레시피 단계 타입 정의
+interface RecipeStage {
+  id: string | number;
+  stage_number: number;
+  title?: string;
+  description?: string;
+  duration_days?: number;
+}
+
 export default function AddRecordScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [temperature, setTemperature] = useState("");
-  const [humidity, setHumidity] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
   const [images, setImages] = useState<string[]>([]);
@@ -36,13 +44,27 @@ export default function AddRecordScreen() {
 
   // 레코드 생성 훅
   const { mutate: createRecord, isPending: isSubmitting } =
-    useCreateJournalRecord(id as string);
+    useCreateJournalRecord();
 
   // 현재 일자
   const currentDate = formatDateWithDay(new Date().toISOString());
 
   // 양조일지에 연결된 레시피의 단계 목록
   const recipeStages = journal?.recipes?.recipe_stages || [];
+
+  // 양조일지 로드 시 현재 단계를 자동으로 선택
+  useEffect(() => {
+    if (journal && journal.current_stage) {
+      // current_stage는 stage_number(숫자)이므로 해당 숫자와 일치하는 단계의 ID를 찾아서 설정
+      const currentStage = recipeStages.find(
+        (stage: RecipeStage) => stage.stage_number === journal.current_stage
+      );
+
+      if (currentStage) {
+        setSelectedStageId(String(currentStage.id));
+      }
+    }
+  }, [journal, recipeStages]);
 
   // 사진 추가 기능 (실제 구현은 필요)
   const handleAddImage = () => {
@@ -69,7 +91,6 @@ export default function AddRecordScreen() {
       title,
       memo,
       temperature: temperature ? parseFloat(temperature) : undefined,
-      humidity: humidity ? parseFloat(humidity) : undefined,
       stage_id: selectedStageId || undefined,
       images: images.length > 0 ? images : undefined,
     });
@@ -77,13 +98,12 @@ export default function AddRecordScreen() {
     // 양조일지 기록 데이터 생성
     createRecord(
       {
-        title,
-        memo,
-        temperature: temperature ? parseFloat(temperature) : undefined,
-        humidity: humidity ? parseFloat(humidity) : undefined,
-        stage_id: selectedStageId || undefined,
-        images: images.length > 0 ? images : undefined,
-      },
+        journal_id: id as string,
+        note: memo,
+        temperature: temperature ? parseFloat(temperature) : null,
+        stage: selectedStageId ? parseInt(selectedStageId) : null,
+        // images는 별도 처리
+      } as any,
       {
         onSuccess: () => {
           Alert.alert("성공", "양조일지 기록이 저장되었습니다.", [
@@ -106,7 +126,7 @@ export default function AddRecordScreen() {
 
   // 선택된 단계 정보
   const selectedStage = recipeStages.find(
-    (stage) => stage.id === selectedStageId
+    (stage: RecipeStage) => String(stage.id) === selectedStageId
   );
 
   // 로딩 상태 표시
@@ -215,21 +235,26 @@ export default function AddRecordScreen() {
               {isStageDropdownOpen && recipeStages.length > 0 && (
                 <View className="mt-2 bg-white border border-gray-200 rounded-[8px] overflow-hidden">
                   {recipeStages
-                    .sort((a, b) => a.stage_number - b.stage_number)
-                    .map((stage) => (
+                    .sort(
+                      (a: RecipeStage, b: RecipeStage) =>
+                        a.stage_number - b.stage_number
+                    )
+                    .map((stage: RecipeStage) => (
                       <TouchableOpacity
-                        key={stage.id}
+                        key={String(stage.id)}
                         className={`py-2 px-3 ${
-                          selectedStageId === stage.id ? "bg-blue-50" : ""
+                          selectedStageId === String(stage.id)
+                            ? "bg-blue-50"
+                            : ""
                         }`}
                         onPress={() => {
-                          setSelectedStageId(stage.id as string);
+                          setSelectedStageId(String(stage.id));
                           setIsStageDropdownOpen(false);
                         }}
                       >
                         <Text
                           className={`${
-                            selectedStageId === stage.id
+                            selectedStageId === String(stage.id)
                               ? "text-blue-600 font-medium"
                               : "text-gray-800"
                           }`}
@@ -258,7 +283,7 @@ export default function AddRecordScreen() {
           </Text>
 
           <View className="flex-row mb-4">
-            <View className="flex-1 mr-4">
+            <View className="flex-1">
               <Text className="text-sm text-gray-600 mb-1">온도 (°C)</Text>
               <View className="flex-row items-center border border-gray-300 rounded-[8px] px-3 py-2">
                 <Ionicons name="thermometer-outline" size={18} color="#666" />
@@ -267,20 +292,6 @@ export default function AddRecordScreen() {
                   placeholder="25"
                   value={temperature}
                   onChangeText={setTemperature}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View className="flex-1">
-              <Text className="text-sm text-gray-600 mb-1">습도 (%)</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-[8px] px-3 py-2">
-                <Ionicons name="water-outline" size={18} color="#666" />
-                <TextInput
-                  className="flex-1 ml-2 text-base text-gray-800"
-                  placeholder="60"
-                  value={humidity}
-                  onChangeText={setHumidity}
                   keyboardType="numeric"
                 />
               </View>
