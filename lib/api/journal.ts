@@ -180,7 +180,10 @@ export async function getJournalById(id: string) {
         description,
         recipe_stages(*)
       ),
-      journal_entries(*)
+      journal_entries(
+        *,
+        journal_images(*)
+      )
     `
     )
     .eq("id", id)

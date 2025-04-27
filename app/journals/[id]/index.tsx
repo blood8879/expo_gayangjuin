@@ -367,8 +367,19 @@ export default function JournalDetailScreen() {
                           </View>
                         )}
 
-                        {record.journal_images &&
-                          record.journal_images.length > 0 && (
+                        {(() => {
+                          // 데이터 구조 확인 로그 추가
+                          console.log(
+                            `레코드 ID: ${record.id}, 이미지 데이터:`,
+                            JSON.stringify(record.journal_images, null, 2)
+                          );
+                          if (
+                            !record.journal_images ||
+                            record.journal_images.length === 0
+                          ) {
+                            return null; // 이미지가 없으면 아무것도 렌더링하지 않음
+                          }
+                          return (
                             <View className="mb-3">
                               <Text className="text-sm font-medium text-gray-500 mb-1">
                                 사진
@@ -378,16 +389,35 @@ export default function JournalDetailScreen() {
                                 showsHorizontalScrollIndicator={false}
                                 className="flex-row"
                               >
-                                {record.journal_images.map((image, index) => (
-                                  <Image
-                                    key={index}
-                                    source={{ uri: image.image_url }}
-                                    className="w-20 h-20 rounded-md mr-2"
-                                  />
-                                ))}
+                                {record.journal_images.map((image, index) => {
+                                  // 이미지 URL 확인 로그 추가
+                                  console.log(
+                                    `이미지 ${index} URL:`,
+                                    image.image_url
+                                  );
+                                  return (
+                                    <Image
+                                      key={index}
+                                      source={{ uri: image.image_url }}
+                                      className="w-20 h-20 rounded-md mr-2"
+                                      onError={(e) =>
+                                        console.error(
+                                          `이미지 로딩 오류 (URL: ${image.image_url}):`,
+                                          e.nativeEvent.error
+                                        )
+                                      }
+                                      onLoad={() =>
+                                        console.log(
+                                          `이미지 로딩 성공 (URL: ${image.image_url})`
+                                        )
+                                      }
+                                    />
+                                  );
+                                })}
                               </ScrollView>
                             </View>
-                          )}
+                          );
+                        })()}
 
                         <View className="flex-row items-center justify-end">
                           <Ionicons
