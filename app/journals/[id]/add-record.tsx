@@ -7,15 +7,23 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/constants/theme";
-import { useJournal, useCreateJournalRecord } from "@/lib/query/journalQueries";
+import {
+  useJournal,
+  useCreateJournalRecord,
+  useUploadJournalImage,
+  useSaveJournalImage,
+} from "@/lib/query/journalQueries";
 import { formatDateWithDay } from "@/lib/utils/dateUtils";
 import * as ImagePicker from "expo-image-picker";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 레시피 단계 타입 정의
 interface RecipeStage {
@@ -29,12 +37,14 @@ interface RecipeStage {
 export default function AddRecordScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [temperature, setTemperature] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // 양조일지 정보 가져오기
   const {
@@ -46,6 +56,9 @@ export default function AddRecordScreen() {
   // 레코드 생성 훅
   const { mutate: createRecord, isPending: isSubmitting } =
     useCreateJournalRecord();
+
+  // 이미지 저장 훅
+  const { mutate: saveImage } = useSaveJournalImage();
 
   // 현재 일자
   const currentDate = formatDateWithDay(new Date().toISOString());
@@ -144,53 +157,154 @@ export default function AddRecordScreen() {
     setImages(newImages);
   };
 
+  // 이미지를 supabase storage에 업로드하는 함수
+  const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
+    try {
+      // 파일 이름 생성 (고유한 이름 보장)
+      const fileName = `${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(7)}`;
+      const fileExt = uri.split(".").pop();
+      const filePath = `${user?.id}/${id}/${fileName}.${fileExt}`;
+
+      // 이미지 파일 가져오기
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Base64 변환없이 바로 blob으로 업로드
+      const { data, error } = await supabase.storage
+        .from("journal-images")
+        .upload(filePath, blob);
+
+      if (error) {
+        console.error("이미지 업로드 에러:", error);
+        return null;
+      }
+
+      // 업로드된 이미지의 공개 URL 가져오기
+      const { data: publicURL } = supabase.storage
+        .from("journal-images")
+        .getPublicUrl(filePath);
+
+      return publicURL.publicUrl;
+    } catch (error) {
+      console.error("이미지 업로드 중 오류 발생:", error);
+      return null;
+    }
+  };
+
   // 저장 버튼 처리
-  const handleSave = () => {
+  const handleSave = async () => {
     // 유효성 검사
     if (!title.trim()) {
       Alert.alert("알림", "제목을 입력해주세요.");
       return;
     }
 
-    console.log("저장할 기록 데이터:", {
-      title,
-      memo,
-      temperature: temperature ? parseFloat(temperature) : undefined,
-      stage_id: selectedStageId || undefined,
-      images: images.length > 0 ? images : undefined,
-    });
+    setIsUploading(true);
 
-    // 양조일지 기록 데이터 생성
-    createRecord(
-      {
+    try {
+      // 선택된 단계 객체 찾기
+      const selectedStageObject = recipeStages.find(
+        (stage: RecipeStage) => String(stage.id) === selectedStageId
+      );
+
+      // 1. 레코드 먼저 생성
+      const recordData = {
         journal_id: id as string,
         title: title,
         note: memo,
         temperature: temperature ? parseFloat(temperature) : null,
-        stage: selectedStageId ? parseInt(selectedStageId) : null,
-        // images는 별도 처리
-      } as any,
-      {
-        onSuccess: () => {
-          Alert.alert("성공", "양조일지 기록이 저장되었습니다.", [
-            {
-              text: "확인",
-              onPress: () => router.back(),
-            },
-          ]);
+        stage: selectedStageObject ? selectedStageObject.stage_number : null, // ID 대신 stage_number 저장
+      } as any;
+
+      console.log("생성할 레코드 데이터:", recordData); // 데이터 확인 로그
+
+      // 2. 레코드 생성 후 이미지 업로드 및 연결
+      createRecord(recordData, {
+        onSuccess: async (createdRecord) => {
+          console.log("레코드 생성 성공:", createdRecord);
+          // 이미지가 있으면 업로드
+          if (images.length > 0) {
+            let uploadSuccess = true;
+            const uploadPromises = [];
+
+            // 각 이미지 업로드 처리
+            for (const imageUri of images) {
+              try {
+                const uploadedUrl = await uploadImageToSupabase(imageUri);
+
+                if (uploadedUrl) {
+                  // 업로드된 이미지와 기록 연결
+                  const imageData = {
+                    journal_id: id as string,
+                    journal_entry_id: createdRecord.id,
+                    image_url: uploadedUrl,
+                  };
+                  console.log("저장할 이미지 데이터:", imageData); // 이미지 데이터 확인 로그
+                  uploadPromises.push(saveImage(imageData));
+                } else {
+                  console.warn("이미지 업로드 실패:", imageUri);
+                  uploadSuccess = false;
+                }
+              } catch (err) {
+                console.error("이미지 처리 중 오류:", imageUri, err);
+                uploadSuccess = false;
+              }
+            }
+
+            // 모든 이미지 업로드 완료 대기
+            try {
+              await Promise.all(uploadPromises);
+              console.log("모든 이미지 처리 완료");
+            } catch (imageSaveError) {
+              console.error("이미지 메타데이터 저장 중 오류:", imageSaveError);
+              uploadSuccess = false;
+            }
+
+            setIsUploading(false);
+
+            if (!uploadSuccess) {
+              Alert.alert(
+                "주의",
+                "일부 이미지 업로드/저장에 실패했지만, 기록은 저장되었습니다."
+              );
+              router.back();
+            } else {
+              Alert.alert("성공", "양조일지 기록 및 이미지가 저장되었습니다.", [
+                {
+                  text: "확인",
+                  onPress: () => router.back(),
+                },
+              ]);
+            }
+          } else {
+            setIsUploading(false);
+            Alert.alert("성공", "양조일지 기록이 저장되었습니다.", [
+              {
+                text: "확인",
+                onPress: () => router.back(),
+              },
+            ]);
+          }
         },
         onError: (error) => {
+          setIsUploading(false);
           Alert.alert(
             "오류",
             "양조일지 기록 저장에 실패했습니다. 다시 시도해주세요."
           );
           console.error("양조일지 기록 저장 오류:", error);
         },
-      }
-    );
+      });
+    } catch (error) {
+      setIsUploading(false);
+      Alert.alert("오류", "처리 중 오류가 발생했습니다.");
+      console.error("저장 중 오류:", error);
+    }
   };
 
-  // 선택된 단계 정보
+  // 선택된 단계 정보 (UI 표시에 사용됨)
   const selectedStage = recipeStages.find(
     (stage: RecipeStage) => String(stage.id) === selectedStageId
   );
@@ -245,9 +359,9 @@ export default function AddRecordScreen() {
         <TouchableOpacity
           className="px-4 py-1.5 bg-blue-600 rounded-[12px]"
           onPress={handleSave}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isUploading}
         >
-          {isSubmitting ? (
+          {isSubmitting || isUploading ? (
             <ActivityIndicator size="small" color="white" />
           ) : (
             <Text className="text-white font-medium">저장</Text>
