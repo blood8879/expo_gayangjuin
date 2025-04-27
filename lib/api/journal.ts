@@ -34,6 +34,11 @@ export interface JournalImage {
   description?: string; // 스키마에 description 컬럼 추가됨
 }
 
+// 양조일지 기록 인터페이스를 확장해서 이미지 포함
+export interface JournalEntry extends JournalRecord {
+  journal_images?: JournalImage[];
+}
+
 // UI에서 사용하는 양조일지 데이터 타입
 export type JournalFormData = {
   title: string;
@@ -148,6 +153,15 @@ export async function getJournals() {
         name,
         type,
         description
+      ),
+      journal_entries(
+        id,
+        created_at,
+        journal_images(
+          id,
+          image_url,
+          created_at
+        )
       )
     `
     )
@@ -158,8 +172,32 @@ export async function getJournals() {
     throw error;
   }
 
-  console.log(`총 ${data?.length || 0}개의 저널 목록 조회 성공`);
-  return data;
+  // 각 저널에서 가장 최근 이미지를 찾아 cover_image_url에 설정
+  const journalsWithLatestImages = data?.map((journal) => {
+    // 모든 기록에서 이미지를 추출하고 생성일 기준으로 정렬
+    const allImages = journal.journal_entries
+      ?.flatMap((entry: any) => entry.journal_images || [])
+      .sort(
+        (a: JournalImage, b: JournalImage) =>
+          new Date(b.created_at || "").getTime() -
+          new Date(a.created_at || "").getTime()
+      );
+
+    // 가장 최근 이미지 URL을 cover_image_url에 설정
+    if (allImages && allImages.length > 0) {
+      return {
+        ...journal,
+        cover_image_url: allImages[0].image_url,
+      };
+    }
+
+    return journal;
+  });
+
+  console.log(
+    `총 ${journalsWithLatestImages?.length || 0}개의 저널 목록 조회 성공`
+  );
+  return journalsWithLatestImages;
 }
 
 /**
