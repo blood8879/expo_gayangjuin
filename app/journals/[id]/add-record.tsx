@@ -99,6 +99,7 @@ export default function AddRecordScreen() {
     createRecord(
       {
         journal_id: id as string,
+        title: title,
         note: memo,
         temperature: temperature ? parseFloat(temperature) : null,
         stage: selectedStageId ? parseInt(selectedStageId) : null,

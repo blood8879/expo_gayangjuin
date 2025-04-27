@@ -40,6 +40,7 @@ type StageStatus = "current" | "completed" | "upcoming";
 interface JournalRecord {
   id: string | number;
   journal_id: string;
+  title?: string;
   note?: string;
   temperature?: number;
   gravity?: number;
@@ -311,6 +312,12 @@ export default function JournalDetailScreen() {
                         <Text className="text-xs text-gray-500 mb-2">
                           {formatDetailDate(record.created_at)}
                         </Text>
+
+                        {record.title && (
+                          <Text className="text-base font-bold text-gray-800 mb-3">
+                            {record.title}
+                          </Text>
+                        )}
 
                         {(record.temperature || record.gravity) && (
                           <View className="flex-row bg-white rounded-lg p-3 mb-3">
