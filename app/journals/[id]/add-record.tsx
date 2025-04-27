@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/constants/theme";
 import { useJournal, useCreateJournalRecord } from "@/lib/query/journalQueries";
 import { formatDateWithDay } from "@/lib/utils/dateUtils";
+import * as ImagePicker from "expo-image-picker";
 
 // 레시피 단계 타입 정의
 interface RecipeStage {
@@ -67,9 +68,73 @@ export default function AddRecordScreen() {
   }, [journal, recipeStages]);
 
   // 사진 추가 기능 (실제 구현은 필요)
-  const handleAddImage = () => {
-    // 더미 이미지 추가 (실제로는 이미지 피커 사용)
-    setImages([...images, "https://via.placeholder.com/150"]);
+  const handleAddImage = async () => {
+    // 작업 선택 알림창 표시
+    Alert.alert(
+      "사진 추가",
+      "사진을 추가할 방법을 선택하세요",
+      [
+        {
+          text: "사진 촬영",
+          onPress: () => pickImageFromCamera(),
+        },
+        {
+          text: "앨범에서 선택",
+          onPress: () => pickImageFromGallery(),
+        },
+        {
+          text: "취소",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  // 카메라로 사진 촬영
+  const pickImageFromCamera = async () => {
+    // 카메라 권한 요청
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert("알림", "카메라 접근 권한이 필요합니다.");
+      return;
+    }
+
+    // 카메라 실행
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
+  };
+
+  // 갤러리에서 사진 선택
+  const pickImageFromGallery = async () => {
+    // 사진 라이브러리 권한 요청
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert("알림", "사진 라이브러리 접근 권한이 필요합니다.");
+      return;
+    }
+
+    // 갤러리 실행
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
   };
 
   // 이미지 삭제
