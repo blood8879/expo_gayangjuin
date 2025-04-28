@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,12 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { theme } from "@/constants/theme";
-import { getRecipes } from "@/lib/api/recipe";
+import { useRecipes } from "@/lib/query/recipeQueries";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { recipeKeys } from "@/lib/query/queryClient";
 
 // Recipe 타입 정의
 interface Recipe {
@@ -36,9 +38,20 @@ interface Recipe {
 export default function RecipesScreen() {
   const { isAuthenticated, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const queryClient = useQueryClient();
+
+  // useRecipes 훅 사용
+  const { data: recipesData, isLoading, error } = useRecipes();
+
+  // 화면에 포커스가 돌아올 때마다 데이터 새로고침
+  useFocusEffect(
+    React.useCallback(() => {
+      // 레시피 데이터 새로고침
+      queryClient.invalidateQueries({ queryKey: recipeKeys.lists() });
+      return () => {};
+    }, [queryClient])
+  );
 
   // 레시피 카테고리
   const categories = [
@@ -79,40 +92,19 @@ export default function RecipesScreen() {
     },
   ];
 
-  // 현재 선택된 카테고리
-  const [selectedCategory, setSelectedCategory] = useState("all");
-
-  // 레시피 데이터 가져오기
-  useEffect(() => {
-    async function fetchRecipes() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const recipesData = await getRecipes();
-
-        // API 응답 데이터를 UI에 맞게 변환
-        const formattedRecipes = recipesData.map((recipe: any) => ({
-          id: recipe.id,
-          title: recipe.name, // DB의 name 필드를 title로 표시
-          type: recipe.type as "막걸리" | "과실주" | "약주/청주" | "전통주",
-          days: recipe.total_duration_days || 0,
-          progress: 0, // 진행 상태는 아직 구현되지 않음
-          isPublic: recipe.is_public,
-          star: 0, // 리뷰 기능 구현 전
-          reviewCount: 0, // 리뷰 기능 구현 전
-        }));
-
-        setRecipes(formattedRecipes);
-      } catch (err) {
-        console.error("Error fetching recipes:", err);
-        setError("레시피를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchRecipes();
-  }, []);
+  // API 응답 데이터를 UI에 맞게 변환
+  const recipes = recipesData
+    ? recipesData.map((recipe: any) => ({
+        id: recipe.id,
+        title: recipe.name, // DB의 name 필드를 title로 표시
+        type: recipe.type as "막걸리" | "과실주" | "약주/청주" | "전통주",
+        days: recipe.total_duration_days || 0,
+        progress: 0, // 진행 상태는 아직 구현되지 않음
+        isPublic: recipe.is_public,
+        star: 0, // 리뷰 기능 구현 전
+        reviewCount: 0, // 리뷰 기능 구현 전
+      }))
+    : [];
 
   // 카테고리 필터링
   const filteredRecipes = recipes
@@ -144,7 +136,7 @@ export default function RecipesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      {/* <StatusBar style="auto" /> */}
+      <StatusBar style="auto" />
 
       {/* 헤더 */}
       <View className="px-5 pt-12 pb-4">
@@ -245,138 +237,112 @@ export default function RecipesScreen() {
               color={theme.neutral[400]}
             />
             <Text className="mt-3 text-neutral-500 dark:text-neutral-400 text-center">
-              {error}
+              {error instanceof Error
+                ? error.message
+                : "데이터를 불러오는 중 오류가 발생했습니다"}
             </Text>
             <TouchableOpacity
               className="mt-4 py-2 px-4 bg-primary-500 rounded-full"
-              onPress={() => setIsLoading(true)} // 다시 로딩 상태로 만들어 재시도 효과
+              onPress={() =>
+                queryClient.invalidateQueries({ queryKey: recipeKeys.lists() })
+              }
             >
               <Text className="text-white font-medium">다시 시도</Text>
             </TouchableOpacity>
           </View>
-        ) : filteredRecipes.length > 0 ? (
-          filteredRecipes.map((recipe) => (
-            <TouchableOpacity
-              key={recipe.id}
-              className="mb-4"
-              onPress={() => router.push(`/recipes/${recipe.id}`)}
-            >
-              <View className="bg-white dark:bg-neutral-800 rounded-[16px] shadow-sm p-4">
-                <View className="flex-row justify-between mb-2">
-                  <View
-                    style={{ backgroundColor: typeColors[recipe.type]?.bg }}
-                    className="px-2.5 py-1 rounded-full"
-                  >
-                    <Text
-                      style={{ color: typeColors[recipe.type]?.text }}
-                      className="text-xs font-medium"
-                    >
-                      {recipe.type}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    {recipe.isPublic ? (
-                      <>
-                        <Ionicons
-                          name="eye-outline"
-                          size={16}
-                          color={theme.neutral[400]}
-                        />
-                        <Text className="ml-1 text-neutral-400 dark:text-neutral-500 text-xs">
-                          공개
+        ) : filteredRecipes.length === 0 ? (
+          <View className="items-center justify-center py-20">
+            <Ionicons
+              name="book-outline"
+              size={40}
+              color={theme.neutral[400]}
+            />
+            <Text className="mt-3 text-neutral-900 dark:text-white text-center font-bold">
+              {searchQuery ? "검색 결과가 없습니다" : "아직 레시피가 없습니다"}
+            </Text>
+            <Text className="mt-1 text-neutral-500 dark:text-neutral-400 text-center">
+              {searchQuery
+                ? "다른 검색어로 시도해보세요"
+                : "첫 레시피를 작성해보세요"}
+            </Text>
+            {!searchQuery && (
+              <TouchableOpacity
+                className="mt-4 py-3 px-6 bg-primary-500 rounded-full"
+                onPress={() => router.push("/recipes/create")}
+              >
+                <Text className="text-white font-medium">레시피 작성하기</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <>
+            {filteredRecipes.map((recipe) => (
+              <TouchableOpacity
+                key={recipe.id}
+                className="mb-4"
+                onPress={() => router.push(`/recipes/${recipe.id}`)}
+              >
+                <View className="bg-white dark:bg-neutral-800 rounded-[16px] shadow-sm overflow-hidden">
+                  <View className="p-4">
+                    <View className="flex-row justify-between mb-2">
+                      <View
+                        style={{
+                          backgroundColor: typeColors[recipe.type].bg,
+                        }}
+                        className="px-2.5 py-1 rounded-full"
+                      >
+                        <Text
+                          style={{
+                            color: typeColors[recipe.type].text,
+                          }}
+                          className="text-xs font-medium"
+                        >
+                          {recipe.type}
                         </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Ionicons
-                          name="eye-off-outline"
-                          size={16}
-                          color={theme.neutral[400]}
-                        />
-                        <Text className="ml-1 text-neutral-400 dark:text-neutral-500 text-xs">
-                          비공개
-                        </Text>
-                      </>
-                    )}
-                  </View>
-                </View>
-
-                <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
-                  {recipe.title}
-                </Text>
-
-                <View className="flex-row justify-between items-center mb-2">
-                  <View className="flex-row items-center">
-                    <Ionicons
-                      name="time-outline"
-                      size={16}
-                      color={theme.neutral[500]}
-                    />
-                    <Text className="ml-1 text-neutral-500 dark:text-neutral-400 text-xs">
-                      {recipe.days}일 소요
-                    </Text>
-                  </View>
-
-                  {recipe.isPublic && recipe.reviewCount > 0 && (
-                    <View className="flex-row items-center">
-                      <Ionicons name="star" size={16} color="#f59e0b" />
-                      <Text className="ml-1 text-neutral-700 dark:text-neutral-300 text-xs font-medium">
-                        {recipe.star.toFixed(1)}
-                      </Text>
-                      <Text className="ml-1 text-neutral-500 dark:text-neutral-400 text-xs">
-                        ({recipe.reviewCount})
-                      </Text>
+                      </View>
                     </View>
-                  )}
-                </View>
 
-                <View className="mt-2">
-                  <View className="h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                    <View
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${recipe.progress}%`,
-                        backgroundColor:
-                          typeColors[recipe.type]?.text ||
-                          theme.primary.DEFAULT,
-                      }}
-                    />
+                    <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
+                      {recipe.title}
+                    </Text>
+
+                    <View className="flex-row items-center mt-2">
+                      <View className="flex-row items-center mr-4">
+                        <Ionicons
+                          name="calendar-outline"
+                          size={14}
+                          color={theme.neutral[400]}
+                        />
+                        <Text className="ml-1 text-xs text-neutral-500 dark:text-neutral-400">
+                          {recipe.days}일
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  <Text className="mt-1 text-neutral-500 dark:text-neutral-400 text-xs">
-                    {recipe.progress}% 완료
-                  </Text>
                 </View>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              className="mt-2 mb-10"
+              onPress={() => router.push("/recipes/create")}
+            >
+              <View className="bg-white dark:bg-neutral-800 rounded-[16px] py-4 shadow-sm border border-neutral-100 dark:border-neutral-700 flex-row items-center justify-center">
+                <Ionicons
+                  name="add-circle-outline"
+                  size={20}
+                  color={theme.primary.DEFAULT}
+                />
+                <Text
+                  className="ml-2 font-medium"
+                  style={{ color: theme.primary.DEFAULT }}
+                >
+                  새 레시피 작성
+                </Text>
               </View>
             </TouchableOpacity>
-          ))
-        ) : (
-          <View className="items-center justify-center py-10">
-            <Ionicons name="search" size={40} color={theme.neutral[300]} />
-            <Text className="text-neutral-500 dark:text-neutral-400 mt-3 text-center">
-              {searchQuery ? "검색 결과가 없습니다" : "레시피가 없습니다"}
-            </Text>
-          </View>
+          </>
         )}
-
-        {/* 새 레시피 추가 버튼 */}
-        <TouchableOpacity
-          className="mt-2 mb-10"
-          onPress={() => router.push("/recipes/create")}
-        >
-          <View className="bg-white dark:bg-neutral-800 rounded-[16px] py-4 shadow-sm border border-neutral-100 dark:border-neutral-700 flex-row items-center justify-center">
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={theme.primary.DEFAULT}
-            />
-            <Text
-              className="ml-2 font-medium"
-              style={{ color: theme.primary.DEFAULT }}
-            >
-              새 레시피 작성
-            </Text>
-          </View>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

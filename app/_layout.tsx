@@ -1,80 +1,90 @@
-import { useEffect } from "react";
-import { View, Text } from "react-native";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { useColorScheme } from "react-native";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { Ionicons } from "@expo/vector-icons";
-import { QueryClientProvider } from "@tanstack/react-query";
-
-import "../global.css";
+import { useEffect } from "react";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { MenuProvider } from "react-native-popup-menu";
+import { View } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { queryClient } from "@/lib/query/queryClient";
+import "../global.css";
 
-// 스플래시 스크린 유지
+export { ErrorBoundary } from "expo-router";
+
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
-  // 폰트 로딩
-  const [fontsLoaded, fontError] = useFonts({
-    "Pretendard-Regular": require("../assets/fonts/Pretendard-Regular.ttf"),
-    "Pretendard-Medium": require("../assets/fonts/Pretendard-Medium.ttf"),
-    "Pretendard-Bold": require("../assets/fonts/Pretendard-Bold.ttf"),
-    ...Ionicons.font, // <-- Ionicons 폰트 로드 추가
+  const [loaded, error] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    ...FontAwesome.font,
   });
 
   useEffect(() => {
-    // URL 리스너 초기화
+    if (error) throw error;
+  }, [error]);
 
-    if (fontsLoaded || fontError) {
-      // 폰트 로딩 완료되거나 에러 발생 시 스플래시 스크린 숨김
+  useEffect(() => {
+    if (loaded) {
       SplashScreen.hideAsync();
     }
+  }, [loaded]);
 
-    // 컴포넌트 언마운트 시 리스너 제거
-  }, [fontsLoaded, fontError]);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
-  if (!fontsLoaded && !fontError) {
+  if (!loaded) {
     return null;
   }
+
+  return <RootLayoutNav />;
+}
+
+function RootLayoutNav() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <View style={{ flex: 1 }}>
-          {/* 상태바 설정 */}
-          <StatusBar style={isDark ? "light" : "dark"} />
-
-          {/* 스택 네비게이션 설정 */}
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: isDark ? "#121212" : "#F8FAFC",
-              },
-              animation: "slide_from_right",
-            }}
-          >
-            {/* 인증 필요 화면들 */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-            {/* 양조일지 화면들 */}
-            <Stack.Screen name="journals" options={{ headerShown: false }} />
-
-            {/* 인증 화면들 */}
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-
-            <Stack.Screen
-              name="adult-verification"
-              options={{ headerShown: false }}
-              // MVP에서는 성인인증 화면 사용하지 않음. 필요시 다시 활성화
-            />
-          </Stack>
-        </View>
+        <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+          <MenuProvider>
+            <View style={{ flex: 1 }}>
+              <StatusBar style={isDark ? "light" : "dark"} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: isDark ? "#121212" : "#F8FAFC",
+                  },
+                  animation: "slide_from_right",
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="journals"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="adult-verification"
+                  options={{ headerShown: false }}
+                />
+              </Stack>
+            </View>
+          </MenuProvider>
+        </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

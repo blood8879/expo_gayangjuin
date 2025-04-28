@@ -24,13 +24,9 @@ import IngredientsForm from "../../components/recipe/IngredientsForm";
 import StepsForm from "../../components/recipe/StepsForm";
 
 // 새로운 API 모듈에서 함수 불러오기
-import {
-  saveRecipe,
-  saveIngredients,
-  saveSteps,
-  RecipeFormData,
-} from "../../lib/api/recipe";
+import { RecipeFormData } from "../../lib/api/recipe";
 import { useAuth } from "../../contexts/AuthContext";
+import { useCreateRecipe } from "@/lib/query/recipeQueries";
 
 type IngredientType = {
   id: string;
@@ -54,7 +50,9 @@ export default function CreateRecipeScreen() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("막걸리");
   const [isPublic, setIsPublic] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
+  // React Query 훅 사용
+  const { mutate: createRecipe, isPending: isSaving } = useCreateRecipe();
 
   const [ingredients, setIngredients] = useState<IngredientType[]>([
     { id: "1", name: "", amount: "", unit: "g", isCustomUnit: false },
@@ -183,9 +181,6 @@ export default function CreateRecipeScreen() {
       // 키보드 닫기
       Keyboard.dismiss();
 
-      // 저장 중 상태로 변경
-      setIsSaving(true);
-
       // 사용자 ID 사용 (인증된 사용자의 ID 사용)
       const userId = user.id;
 
@@ -198,47 +193,45 @@ export default function CreateRecipeScreen() {
         user_id: userId,
       };
 
-      // 레시피 저장
-      const savedRecipe = await saveRecipe(recipeData);
-      const recipeId = savedRecipe.id;
-
-      // 재료 저장 - stage 필드 추가
-      const ingredientsData = ingredients.map((ing, index) => ({
-        recipe_id: recipeId,
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        stage: 1, // stage 필드 명시적으로 설정
-      }));
-
-      await saveIngredients(ingredientsData);
-
-      // 단계 저장 - days를 duration_days로 변경, stage_number 필드 사용
-      const stepsData = steps.map((step, index) => ({
-        recipe_id: recipeId,
-        description: step.description,
-        duration_days: parseInt(step.days) || 0, // string을 number로 변환하고, NaN인 경우 0으로 설정
-        stage_number: index + 1, // order 대신 stage_number 필드 사용
-        title: `단계 ${index + 1}`, // title 필드 추가 (not null constraint 위반 방지)
-      }));
-
-      await saveSteps(stepsData);
-
-      // 저장 성공 알림
-      Alert.alert("성공", "레시피가 저장되었습니다.", [
+      // React Query 뮤테이션 사용
+      createRecipe(
         {
-          text: "확인",
-          onPress: () => router.back(),
+          recipeData,
+          ingredients: ingredients.map((ing) => ({
+            name: ing.name,
+            amount: ing.amount,
+            unit: ing.unit,
+          })),
+          steps: steps.map((step) => ({
+            description: step.description,
+            days: step.days,
+          })),
         },
-      ]);
+        {
+          onSuccess: () => {
+            // 저장 성공 알림
+            Alert.alert("성공", "레시피가 저장되었습니다.", [
+              {
+                text: "확인",
+                onPress: () => router.back(),
+              },
+            ]);
+          },
+          onError: (error) => {
+            console.error("레시피 저장 오류:", error);
+            Alert.alert(
+              "오류",
+              "레시피 저장 중 오류가 발생했습니다. 다시 시도해주세요."
+            );
+          },
+        }
+      );
     } catch (error) {
       console.error("레시피 저장 오류:", error);
       Alert.alert(
         "오류",
         "레시피 저장 중 오류가 발생했습니다. 다시 시도해주세요."
       );
-    } finally {
-      setIsSaving(false);
     }
   };
 

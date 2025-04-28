@@ -11,6 +11,7 @@ export interface Journal {
   created_at?: string;
   updated_at?: string;
   cover_image_url?: string;
+  is_completed?: boolean; // 완료 여부 속성 추가
 }
 
 // 양조일지 기록 인터페이스

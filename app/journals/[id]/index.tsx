@@ -12,6 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  Menu,
+  MenuOptions,
+  MenuOption,
+  MenuTrigger,
+} from "react-native-popup-menu";
 import { theme } from "@/constants/theme";
 import {
   useJournal,
@@ -63,6 +69,36 @@ export default function JournalDetailScreen() {
 
   // 양조일지 업데이트 훅
   const { mutate: updateJournal, isPending: isUpdating } = useUpdateJournal();
+
+  // 상태 업데이트 함수 (팝업 메뉴에서 사용)
+  const updateJournalStatus = (isCompleted: boolean) => {
+    if (!id || journal?.is_completed === isCompleted) {
+      Alert.alert(
+        "알림",
+        `이미 ${isCompleted ? "완료" : "진행중"} 상태입니다.`
+      );
+      return;
+    }
+
+    updateJournal(
+      {
+        id: id as string,
+        journal: { is_completed: isCompleted },
+      },
+      {
+        onSuccess: () => {
+          Alert.alert(
+            "성공",
+            `상태가 ${isCompleted ? "완료" : "진행중"}으로 변경되었습니다.`
+          );
+        },
+        onError: (error) => {
+          Alert.alert("오류", "상태 변경에 실패했습니다.");
+          console.error("상태 변경 오류:", error);
+        },
+      }
+    );
+  };
 
   // 단계 변경 처리 함수
   const handleStageChange = (stageNumber: number) => {
@@ -189,17 +225,35 @@ export default function JournalDetailScreen() {
         <Text className="text-lg font-medium text-gray-800">
           {journal.title}
         </Text>
-        <TouchableOpacity
-          className="p-1"
-          onPress={handleDelete}
-          disabled={isDeleting}
-        >
-          {isDeleting ? (
-            <ActivityIndicator size="small" color="#FF6B6B" />
-          ) : (
-            <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
-          )}
-        </TouchableOpacity>
+        <Menu>
+          <MenuTrigger customStyles={{ triggerWrapper: { padding: 5 } }}>
+            {isUpdating ? (
+              <ActivityIndicator size="small" color={theme.primary.DEFAULT} />
+            ) : (
+              <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+            )}
+          </MenuTrigger>
+          <MenuOptions
+            customStyles={{
+              optionsContainer: {
+                borderRadius: 8,
+                marginTop: 30,
+                width: 150,
+              },
+            }}
+          >
+            <MenuOption onSelect={() => updateJournalStatus(false)}>
+              <Text style={{ padding: 10 }}>진행중으로 변경</Text>
+            </MenuOption>
+            <MenuOption onSelect={() => updateJournalStatus(true)}>
+              <Text style={{ padding: 10 }}>완료로 변경</Text>
+            </MenuOption>
+            <View style={{ height: 1, backgroundColor: "#eee" }} />
+            <MenuOption onSelect={handleDelete}>
+              <Text style={{ padding: 10, color: "red" }}>삭제</Text>
+            </MenuOption>
+          </MenuOptions>
+        </Menu>
       </View>
 
       <ScrollView className="flex-1 flex-col">
@@ -212,14 +266,19 @@ export default function JournalDetailScreen() {
               {journal.recipes?.type || "-"}
             </Text>
           </View>
-          <View className="bg-blue-100 px-3 py-1.5 rounded-full mr-2">
-            <Text className="text-blue-600 text-sm font-medium">
+          <View
+            className={`px-3 py-1.5 rounded-full mr-2 ${
+              journal.is_completed ? "bg-green-100" : "bg-blue-100"
+            }`}
+          >
+            <Text
+              className={`text-sm font-medium ${
+                journal.is_completed ? "text-green-600" : "text-blue-600"
+              }`}
+            >
               {journal.is_completed ? "완료" : "진행중"}
             </Text>
           </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-          </TouchableOpacity>
         </View>
 
         {recipeStages.length > 0 && (

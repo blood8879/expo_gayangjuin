@@ -118,11 +118,13 @@ export default function LoginScreen() {
                 <>
                   <Button
                     size="lg"
-                    variant="outline"
-                    icon="logo-google"
                     iconPosition="left"
                     style={{
                       borderRadius: 12,
+                      height: 50,
+                      backgroundColor: "white",
+                      borderColor: "#000",
+                      borderWidth: 1,
                     }}
                     textStyle={{ color: "#000" }}
                     onPress={handleGoogleLogin}
@@ -145,7 +147,9 @@ export default function LoginScreen() {
                     style={{
                       backgroundColor: "#FEE500",
                       borderRadius: 12,
-                      borderWidth: 0, // 테두리 제거
+                      // borderWidth: 0, // 테두리 제거
+                      marginTop: 16,
+                      height: 50,
                     }}
                     textStyle={{ color: "#000" }}
                     onPress={handleKakaoLogin}
