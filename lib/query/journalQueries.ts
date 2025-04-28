@@ -15,6 +15,9 @@ import {
   getJournalRecords,
   uploadJournalImage,
   listTables,
+  getJournalRecordById,
+  getJournalRecordImages,
+  deleteJournalImage,
 } from "../api/journal";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -123,21 +126,16 @@ export function useUpdateJournalRecord() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      journalId,
-      record,
-    }: {
-      id: string;
-      journalId: string;
-      record: Partial<JournalRecord>;
-    }) => updateJournalRecord(id, record),
+    mutationFn: (record: Partial<JournalRecord> & { id: string }) => {
+      const { id, ...recordData } = record;
+      return updateJournalRecord(id, recordData);
+    },
     onSuccess: (_, variables) => {
-      const { journalId } = variables;
-      queryClient.invalidateQueries({ queryKey: ["journal", journalId] });
-      queryClient.invalidateQueries({
-        queryKey: ["journalRecords", journalId],
-      });
+      const { id } = variables;
+      queryClient.invalidateQueries({ queryKey: ["journalRecord", id] });
+      queryClient.invalidateQueries({ queryKey: ["journalRecordImages", id] });
+      // 연결된 journal 데이터도 갱신
+      queryClient.invalidateQueries({ queryKey: ["journal"] });
     },
   });
 }
@@ -185,11 +183,12 @@ export function useSaveJournalImage() {
     mutationFn: (image: Omit<JournalImage, "id" | "created_at">) =>
       saveJournalImage(image),
     onSuccess: (_, variables) => {
-      const { journal_id } = variables;
-      queryClient.invalidateQueries({ queryKey: ["journal", journal_id] });
+      const { journal_entry_id } = variables;
       queryClient.invalidateQueries({
-        queryKey: ["journalRecords", journal_id],
+        queryKey: ["journalRecordImages", journal_entry_id],
       });
+      // 연결된 journal 데이터도 갱신
+      queryClient.invalidateQueries({ queryKey: ["journal"] });
     },
   });
 }
@@ -202,5 +201,41 @@ export function useJournalRecords(journalId: string) {
     queryKey: ["journalRecords", journalId],
     queryFn: () => getJournalRecords(journalId),
     enabled: !!journalId,
+  });
+}
+
+/**
+ * 단일 양조일지 기록을 가져오는 쿼리 훅
+ */
+export function useJournalRecord(id: string) {
+  return useQuery({
+    queryKey: ["journalRecord", id],
+    queryFn: () => getJournalRecordById(id),
+    enabled: !!id,
+  });
+}
+
+/**
+ * 특정 기록의 이미지를 가져오는 쿼리 훅
+ */
+export function useJournalRecordImages(recordId: string) {
+  return useQuery({
+    queryKey: ["journalRecordImages", recordId],
+    queryFn: () => getJournalRecordImages(recordId),
+    enabled: !!recordId,
+  });
+}
+
+/**
+ * 양조일지 이미지 삭제를 위한 뮤테이션 훅
+ */
+export function useDeleteJournalImage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteJournalImage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journalRecordImages"] });
+    },
   });
 }

@@ -404,3 +404,61 @@ export async function listTables() {
     return [];
   }
 }
+
+/**
+ * 양조일지 기록 상세 조회 함수
+ */
+export async function getJournalRecordById(id: string) {
+  console.log(`ID: ${id}로 저널 기록 상세 조회 시도`);
+
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select(`*`)
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("저널 기록 상세 조회 에러:", error);
+    throw error;
+  }
+
+  console.log("저널 기록 상세 조회 성공:", data);
+  return data;
+}
+
+/**
+ * 양조일지 기록 이미지 조회 함수
+ */
+export async function getJournalRecordImages(recordId: string) {
+  console.log(`기록 ID: ${recordId}로 이미지 조회 시도`);
+
+  const { data, error } = await supabase
+    .from("journal_images")
+    .select(`*`)
+    .eq("journal_entry_id", recordId);
+
+  if (error) {
+    console.error("저널 기록 이미지 조회 에러:", error);
+    throw error;
+  }
+
+  console.log(`저널 기록 이미지 ${data?.length || 0}개 조회 성공`);
+  return data;
+}
+
+/**
+ * 양조일지 이미지 삭제 함수
+ */
+export async function deleteJournalImage(id: string) {
+  console.log(`ID: ${id}의 이미지 삭제 시도`);
+
+  const { error } = await supabase.from("journal_images").delete().eq("id", id);
+
+  if (error) {
+    console.error("이미지 삭제 에러:", error);
+    throw error;
+  }
+
+  console.log("이미지 삭제 성공");
+  return true;
+}
