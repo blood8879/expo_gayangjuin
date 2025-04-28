@@ -15,6 +15,7 @@ import { MenuProvider } from "react-native-popup-menu";
 import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { queryClient } from "@/lib/query/queryClient";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 
 export { ErrorBoundary } from "expo-router";
@@ -59,31 +60,36 @@ function RootLayoutNav() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-          <MenuProvider>
-            <View style={{ flex: 1 }}>
-              <StatusBar style={isDark ? "light" : "dark"} />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: {
-                    backgroundColor: isDark ? "#121212" : "#F8FAFC",
-                  },
-                  animation: "slide_from_right",
-                }}
-              >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="journals"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="adult-verification"
-                  options={{ headerShown: false }}
-                />
-              </Stack>
-            </View>
-          </MenuProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <MenuProvider>
+              <View style={{ flex: 1 }}>
+                <StatusBar style={isDark ? "light" : "dark"} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: {
+                      backgroundColor: isDark ? "#121212" : "#F8FAFC",
+                    },
+                    animation: "slide_from_right",
+                  }}
+                >
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="journals"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="adult-verification"
+                    options={{ headerShown: false }}
+                  />
+                </Stack>
+              </View>
+            </MenuProvider>
+          </GestureHandlerRootView>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

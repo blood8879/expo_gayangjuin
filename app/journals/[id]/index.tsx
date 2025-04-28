@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
@@ -18,11 +19,13 @@ import {
   MenuOption,
   MenuTrigger,
 } from "react-native-popup-menu";
+import { Swipeable } from "react-native-gesture-handler";
 import { theme } from "@/constants/theme";
 import {
   useJournal,
   useDeleteJournal,
   useUpdateJournal,
+  useDeleteJournalRecord,
 } from "@/lib/query/journalQueries";
 import { formatDetailDate, formatDate } from "@/lib/utils/dateUtils";
 import StageList from "@/components/journal/StageList";
@@ -60,6 +63,7 @@ interface JournalRecord {
 export default function JournalDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
 
   // 양조일지 정보 가져오기
   const { data: journal, isLoading, isError } = useJournal(id as string);
@@ -69,6 +73,10 @@ export default function JournalDetailScreen() {
 
   // 양조일지 업데이트 훅
   const { mutate: updateJournal, isPending: isUpdating } = useUpdateJournal();
+
+  // 양조일지 기록 삭제 훅
+  const { mutate: deleteRecord, isPending: isDeletingRecord } =
+    useDeleteJournalRecord();
 
   // 상태 업데이트 함수 (팝업 메뉴에서 사용)
   const updateJournalStatus = (isCompleted: boolean) => {
@@ -156,6 +164,89 @@ export default function JournalDetailScreen() {
         },
       },
     ]);
+  };
+
+  // 기록 삭제 처리 함수
+  const handleDeleteRecord = (recordId: string) => {
+    Alert.alert("기록 삭제", "이 기록을 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+        onPress: () => {
+          // 열린 Swipeable 닫기
+          if (swipeableRefs.current[recordId]) {
+            swipeableRefs.current[recordId]?.close();
+          }
+        },
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          deleteRecord(
+            { id: String(recordId), journalId: id as string },
+            {
+              onSuccess: () => {
+                Alert.alert("성공", "기록이 삭제되었습니다.");
+              },
+              onError: (error) => {
+                Alert.alert("오류", "기록 삭제에 실패했습니다.");
+                console.error("기록 삭제 오류:", error);
+              },
+            }
+          );
+        },
+      },
+    ]);
+  };
+
+  // 기록 수정 화면으로 이동
+  const handleEditRecord = (recordId: string) => {
+    if (swipeableRefs.current[recordId]) {
+      swipeableRefs.current[recordId]?.close();
+    }
+    router.push(`/journals/${id}/edit-record?recordId=${recordId}`);
+  };
+
+  // 스와이프 오른쪽에 표시할 삭제 버튼 렌더링 함수
+  const renderRightActions = (recordId: string) => {
+    const screenWidth = Dimensions.get("window").width;
+
+    return (
+      <View style={{ width: 160, flexDirection: "row" }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#3498db",
+            justifyContent: "center",
+            alignItems: "center",
+            width: 80,
+            height: "100%",
+          }}
+          onPress={() => handleEditRecord(String(recordId))}
+        >
+          <Ionicons name="create-outline" size={24} color="#fff" />
+          <Text style={{ color: "#fff", fontSize: 12, marginTop: 4 }}>
+            수정
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#e74c3c",
+            justifyContent: "center",
+            alignItems: "center",
+            width: 80,
+            height: "100%",
+          }}
+          onPress={() => handleDeleteRecord(String(recordId))}
+        >
+          <Ionicons name="trash-outline" size={24} color="#fff" />
+          <Text style={{ color: "#fff", fontSize: 12, marginTop: 4 }}>
+            삭제
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   // 로딩 상태 표시
@@ -342,155 +433,175 @@ export default function JournalDetailScreen() {
                 );
 
                 return (
-                  <View
+                  <Swipeable
                     key={record.id}
-                    className="flex-1 flex-row border-b border-gray-100"
+                    ref={(ref) => {
+                      swipeableRefs.current[String(record.id)] = ref;
+                    }}
+                    renderRightActions={() =>
+                      renderRightActions(String(record.id))
+                    }
+                    overshootRight={false}
+                    onSwipeableOpen={() => {
+                      // 다른 열린 아이템 닫기 (한 번에 하나만 열기 위해)
+                      Object.keys(swipeableRefs.current).forEach((key) => {
+                        if (
+                          key !== String(record.id) &&
+                          swipeableRefs.current[key]
+                        ) {
+                          swipeableRefs.current[key]?.close();
+                        }
+                      });
+                    }}
                   >
-                    <View className="w-24 shrink-0 px-2 py-4 bg-white">
-                      <Text className="text-sm font-bold text-gray-800">
-                        {formatDate(record.created_at).slice(5)}{" "}
-                        {/* 월-일만 표시 */}
-                      </Text>
-                      {record.stage && recipeStages.length > 0 && (
-                        <>
-                          <Text className="text-xs text-gray-500 my-1">
-                            {record.stage}단계
+                    <View className="flex-1 flex-row border-b border-gray-100">
+                      <View className="w-24 shrink-0 px-2 py-4 bg-white">
+                        <Text className="text-sm font-bold text-gray-800">
+                          {formatDate(record.created_at).slice(5)}{" "}
+                          {/* 월-일만 표시 */}
+                        </Text>
+                        {record.stage && recipeStages.length > 0 && (
+                          <>
+                            <Text className="text-xs text-gray-500 my-1">
+                              {record.stage}단계
+                            </Text>
+                            {relatedStage && (
+                              <Text className="text-sm text-blue-600">
+                                {relatedStage.title ||
+                                  `단계 ${relatedStage.stage_number}`}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                      </View>
+
+                      <View className="flex-1 bg-blue-50 border-l-2 border-blue-600">
+                        <View className="px-4 py-4">
+                          <Text className="text-xs text-gray-500 mb-2">
+                            {formatDetailDate(record.created_at)}
                           </Text>
-                          {relatedStage && (
-                            <Text className="text-sm text-blue-600">
-                              {relatedStage.title ||
-                                `단계 ${relatedStage.stage_number}`}
+
+                          {record.title && (
+                            <Text className="text-base font-bold text-gray-800 mb-3">
+                              {record.title}
                             </Text>
                           )}
-                        </>
-                      )}
-                    </View>
 
-                    <View className="flex-1 bg-blue-50 border-l-2 border-blue-600">
-                      <View className="px-4 py-4">
-                        <Text className="text-xs text-gray-500 mb-2">
-                          {formatDetailDate(record.created_at)}
-                        </Text>
-
-                        {record.title && (
-                          <Text className="text-base font-bold text-gray-800 mb-3">
-                            {record.title}
-                          </Text>
-                        )}
-
-                        {(record.temperature || record.gravity) && (
-                          <View className="flex-row bg-white rounded-lg p-3 mb-3">
-                            {record.temperature && (
-                              <View className="flex-1 items-center">
-                                <Ionicons
-                                  name="thermometer-outline"
-                                  size={20}
-                                  color="#4D79FF"
-                                />
-                                <Text className="text-xs text-gray-500 mt-1">
-                                  온도
-                                </Text>
-                                <Text className="text-base font-semibold text-gray-800 mt-0.5">
-                                  {record.temperature}°C
-                                </Text>
-                              </View>
-                            )}
-                            {record.gravity && (
-                              <View className="flex-1 items-center">
-                                <Ionicons
-                                  name="water-outline"
-                                  size={20}
-                                  color="#4D79FF"
-                                />
-                                <Text className="text-xs text-gray-500 mt-1">
-                                  비중
-                                </Text>
-                                <Text className="text-base font-semibold text-gray-800 mt-0.5">
-                                  {record.gravity}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        )}
-
-                        {record.note && (
-                          <View className="mb-3">
-                            <Text className="text-sm font-medium text-gray-700 mb-1">
-                              내용
-                            </Text>
-                            <View className="bg-white p-3 rounded-lg">
-                              <Text className="text-sm text-gray-800 leading-5">
-                                {record.note}
-                              </Text>
+                          {(record.temperature || record.gravity) && (
+                            <View className="flex-row bg-white rounded-lg p-3 mb-3">
+                              {record.temperature && (
+                                <View className="flex-1 items-center">
+                                  <Ionicons
+                                    name="thermometer-outline"
+                                    size={20}
+                                    color="#4D79FF"
+                                  />
+                                  <Text className="text-xs text-gray-500 mt-1">
+                                    온도
+                                  </Text>
+                                  <Text className="text-base font-semibold text-gray-800 mt-0.5">
+                                    {record.temperature}°C
+                                  </Text>
+                                </View>
+                              )}
+                              {record.gravity && (
+                                <View className="flex-1 items-center">
+                                  <Ionicons
+                                    name="water-outline"
+                                    size={20}
+                                    color="#4D79FF"
+                                  />
+                                  <Text className="text-xs text-gray-500 mt-1">
+                                    비중
+                                  </Text>
+                                  <Text className="text-base font-semibold text-gray-800 mt-0.5">
+                                    {record.gravity}
+                                  </Text>
+                                </View>
+                              )}
                             </View>
-                          </View>
-                        )}
+                          )}
 
-                        {(() => {
-                          // 데이터 구조 확인 로그 추가
-                          console.log(
-                            `레코드 ID: ${record.id}, 이미지 데이터:`,
-                            JSON.stringify(record.journal_images, null, 2)
-                          );
-                          if (
-                            !record.journal_images ||
-                            record.journal_images.length === 0
-                          ) {
-                            return null; // 이미지가 없으면 아무것도 렌더링하지 않음
-                          }
-                          return (
+                          {record.note && (
                             <View className="mb-3">
-                              <Text className="text-sm font-medium text-gray-500 mb-1">
-                                사진
+                              <Text className="text-sm font-medium text-gray-700 mb-1">
+                                내용
                               </Text>
-                              <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                className="flex-row"
-                              >
-                                {record.journal_images.map((image, index) => {
-                                  // 이미지 URL 확인 로그 추가
-                                  console.log(
-                                    `이미지 ${index} URL:`,
-                                    image.image_url
-                                  );
-                                  return (
-                                    <Image
-                                      key={index}
-                                      source={{ uri: image.image_url }}
-                                      className="w-20 h-20 rounded-md mr-2"
-                                      onError={(e) =>
-                                        console.error(
-                                          `이미지 로딩 오류 (URL: ${image.image_url}):`,
-                                          e.nativeEvent.error
-                                        )
-                                      }
-                                      onLoad={() =>
-                                        console.log(
-                                          `이미지 로딩 성공 (URL: ${image.image_url})`
-                                        )
-                                      }
-                                    />
-                                  );
-                                })}
-                              </ScrollView>
+                              <View className="bg-white p-3 rounded-lg">
+                                <Text className="text-sm text-gray-800 leading-5">
+                                  {record.note}
+                                </Text>
+                              </View>
                             </View>
-                          );
-                        })()}
+                          )}
 
-                        <View className="flex-row items-center justify-end">
-                          <Ionicons
-                            name="time-outline"
-                            size={16}
-                            color="#888"
-                          />
-                          <Text className="text-xs text-gray-500 ml-1">
-                            {new Date(record.created_at).toLocaleString()} 작성
-                          </Text>
+                          {(() => {
+                            // 데이터 구조 확인 로그 추가
+                            console.log(
+                              `레코드 ID: ${record.id}, 이미지 데이터:`,
+                              JSON.stringify(record.journal_images, null, 2)
+                            );
+                            if (
+                              !record.journal_images ||
+                              record.journal_images.length === 0
+                            ) {
+                              return null; // 이미지가 없으면 아무것도 렌더링하지 않음
+                            }
+                            return (
+                              <View className="mb-3">
+                                <Text className="text-sm font-medium text-gray-500 mb-1">
+                                  사진
+                                </Text>
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={false}
+                                  className="flex-row"
+                                >
+                                  {record.journal_images.map((image, index) => {
+                                    // 이미지 URL 확인 로그 추가
+                                    console.log(
+                                      `이미지 ${index} URL:`,
+                                      image.image_url
+                                    );
+                                    return (
+                                      <Image
+                                        key={index}
+                                        source={{ uri: image.image_url }}
+                                        className="w-20 h-20 rounded-md mr-2"
+                                        onError={(e) =>
+                                          console.error(
+                                            `이미지 로딩 오류 (URL: ${image.image_url}):`,
+                                            e.nativeEvent.error
+                                          )
+                                        }
+                                        onLoad={() =>
+                                          console.log(
+                                            `이미지 로딩 성공 (URL: ${image.image_url})`
+                                          )
+                                        }
+                                      />
+                                    );
+                                  })}
+                                </ScrollView>
+                              </View>
+                            );
+                          })()}
+
+                          <View className="flex-row items-center justify-end">
+                            <Ionicons
+                              name="time-outline"
+                              size={16}
+                              color="#888"
+                            />
+                            <Text className="text-xs text-gray-500 ml-1">
+                              {new Date(record.created_at).toLocaleString()}{" "}
+                              작성
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     </View>
-                  </View>
+                  </Swipeable>
                 );
               })
           )}
