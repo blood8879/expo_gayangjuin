@@ -8,8 +8,6 @@ import {
   Image,
   Switch,
   GestureResponderEvent,
-  Modal,
-  TextInput,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -48,13 +46,12 @@ interface ToggleItemProps {
 export default function ProfileScreen() {
   const [darkMode, setDarkMode] = React.useState(false);
   const [pushNotification, setPushNotification] = React.useState(true);
-  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const { user: authUser, signOut } = useAuth();
 
-  // 유저 정보 상태 (초기값은 빈 객체, Supabase에서 로드)
+  // 유저 정보 상태
   const [user, setUser] = React.useState<UserProfile>({
     name: "",
     email: "",
@@ -63,11 +60,6 @@ export default function ProfileScreen() {
     recipes: 0,
     journals: 0,
     events: 0,
-  });
-
-  // 프로필 수정을 위한 임시 상태 값
-  const [editingProfile, setEditingProfile] = React.useState<UserProfile>({
-    ...user,
   });
 
   // Supabase에서 사용자 프로필 정보 가져오기
@@ -185,57 +177,9 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // 프로필 수정 모달 열기
-  const handleOpenEditModal = () => {
-    setEditingProfile({ ...user });
-    setIsEditModalVisible(true);
-  };
-
-  // 프로필 수정 취소
-  const handleCancelEdit = () => {
-    setIsEditModalVisible(false);
-  };
-
-  // 프로필 수정 저장 (Supabase로 업데이트)
-  const handleSaveEdit = async () => {
-    if (!authUser) {
-      Alert.alert("오류", "로그인 상태를 확인할 수 없습니다");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      // Supabase users 테이블 업데이트
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({
-          full_name: editingProfile.name,
-          bio: editingProfile.bio,
-          // 이메일과 프로필 이미지는 별도 로직 필요 (Auth 업데이트 등)
-        })
-        .eq("id", authUser.id);
-
-      if (updateError) throw updateError;
-
-      // 로컬 상태 업데이트
-      setUser(editingProfile);
-      setIsEditModalVisible(false);
-      Alert.alert("성공", "프로필이 업데이트되었습니다");
-    } catch (err: any) {
-      console.error("프로필 업데이트 오류:", err);
-      Alert.alert("오류", "프로필 업데이트에 실패했습니다");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 프로필 수정할 값 변경 처리
-  const handleProfileChange = (field: keyof UserProfile, value: string) => {
-    setEditingProfile((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  // 프로필 수정 페이지로 이동
+  const handleEditProfile = () => {
+    router.push("/profile/edit");
   };
 
   // 로그아웃 처리
@@ -250,7 +194,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // 로딩 중 표시
+  // 로그아웃 중 표시
   if (isLoading && !user.name) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900">
@@ -316,7 +260,7 @@ export default function ProfileScreen() {
               </Text>
               <TouchableOpacity
                 className="bg-neutral-100 dark:bg-neutral-700 py-1 px-3 rounded-full self-start"
-                onPress={handleOpenEditModal}
+                onPress={handleEditProfile}
                 disabled={isLoading}
               >
                 <Text className="text-neutral-500 dark:text-neutral-300 text-xs font-medium">
@@ -444,117 +388,6 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* 프로필 수정 모달 */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={handleCancelEdit}
-      >
-        <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-          <SafeAreaView className="flex-1">
-            {/* 모달 헤더 */}
-            <View className="px-5 pt-12 pb-4 flex-row items-center justify-between">
-              <TouchableOpacity
-                onPress={handleCancelEdit}
-                className="p-2"
-                disabled={isLoading}
-              >
-                <Ionicons name="close" size={24} color={theme.neutral[900]} />
-              </TouchableOpacity>
-              <Text className="text-xl font-bold text-neutral-900 dark:text-white">
-                프로필 수정
-              </Text>
-              <TouchableOpacity
-                onPress={handleSaveEdit}
-                className="bg-primary-500 px-4 py-2 rounded-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text className="text-white font-medium">저장</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView className="flex-1 px-5">
-              {/* 프로필 이미지 */}
-              <View className="items-center my-6">
-                <View className="w-24 h-24 rounded-full bg-neutral-200 dark:bg-neutral-700 items-center justify-center mb-3">
-                  {editingProfile.profileImage ? (
-                    <Image
-                      source={{ uri: editingProfile.profileImage }}
-                      className="w-24 h-24 rounded-full"
-                    />
-                  ) : (
-                    <Ionicons
-                      name="person"
-                      size={40}
-                      color={theme.neutral[400]}
-                    />
-                  )}
-                </View>
-                <TouchableOpacity
-                  className="bg-neutral-100 dark:bg-neutral-800 py-1 px-4 rounded-full"
-                  disabled={isLoading}
-                >
-                  <Text className="text-primary-500 font-medium">
-                    사진 변경
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* 이름 입력 */}
-              <View className="mb-4">
-                <Text className="text-neutral-700 dark:text-neutral-300 mb-2 font-medium">
-                  이름
-                </Text>
-                <TextInput
-                  value={editingProfile.name}
-                  onChangeText={(text) => handleProfileChange("name", text)}
-                  className="bg-white dark:bg-neutral-800 px-4 py-3 rounded-lg text-neutral-900 dark:text-white"
-                  placeholder="이름을 입력하세요"
-                  placeholderTextColor={theme.neutral[400]}
-                  editable={!isLoading}
-                />
-              </View>
-
-              {/* 이메일 입력 */}
-              <View className="mb-4">
-                <Text className="text-neutral-700 dark:text-neutral-300 mb-2 font-medium">
-                  이메일
-                </Text>
-                <TextInput
-                  value={editingProfile.email}
-                  className="bg-white dark:bg-neutral-800 px-4 py-3 rounded-lg text-neutral-500 dark:text-neutral-500"
-                  keyboardType="email-address"
-                  placeholderTextColor={theme.neutral[400]}
-                  editable={false} // 이메일은 수정 불가능하게 설정
-                />
-              </View>
-
-              {/* 소개 입력 */}
-              <View className="mb-6">
-                <Text className="text-neutral-700 dark:text-neutral-300 mb-2 font-medium">
-                  소개
-                </Text>
-                <TextInput
-                  value={editingProfile.bio}
-                  onChangeText={(text) => handleProfileChange("bio", text)}
-                  className="bg-white dark:bg-neutral-800 px-4 py-3 rounded-lg text-neutral-900 dark:text-white min-h-[120px]"
-                  multiline
-                  textAlignVertical="top"
-                  placeholder="자신을 소개해보세요"
-                  placeholderTextColor={theme.neutral[400]}
-                  editable={!isLoading}
-                />
-              </View>
-            </ScrollView>
-          </SafeAreaView>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
