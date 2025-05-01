@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useJournals } from "@/lib/query/journalQueries";
 import { useRecipes } from "@/lib/query/recipeQueries";
+import Constants from "expo-constants";
 
 interface UserProfile {
   name: string;
@@ -39,6 +40,14 @@ interface MenuItemProps {
   showChevron?: boolean;
 }
 
+interface InfoItemProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  value: string;
+  iconBgColor?: string;
+  iconColor?: string;
+}
+
 interface ToggleItemProps {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -53,6 +62,9 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isPushLoading, setIsPushLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // 앱 버전 정보
+  const appVersion = Constants.expoConfig?.version || "1.0.0";
 
   const { user: authUser, signOut } = useAuth();
   const { data: journalsData } = useJournals();
@@ -197,6 +209,32 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
+  // 정보 아이템 컴포넌트 (클릭 불가능한 정보 표시용)
+  const InfoItem: React.FC<InfoItemProps> = ({
+    icon,
+    title,
+    value,
+    iconBgColor = "#e6f2fe",
+    iconColor = "#4a91db",
+  }) => (
+    <View className="flex-row items-center py-3 px-4 bg-white dark:bg-neutral-800 rounded-[12px] shadow-sm mb-3">
+      <View
+        className="w-10 h-10 rounded-full items-center justify-center mr-4"
+        style={{ backgroundColor: iconBgColor }}
+      >
+        <Ionicons name={icon} size={20} color={iconColor} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-neutral-900 dark:text-white font-medium">
+          {title}
+        </Text>
+        <Text className="text-neutral-500 dark:text-neutral-400 text-xs mt-1">
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+
   // 토글 아이템 컴포넌트
   const ToggleItem: React.FC<ToggleItemProps> = ({
     icon,
@@ -240,8 +278,8 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       await signOut();
-      // 로그아웃 후 로그인 화면으로 이동 (필요에 따라 조정)
-      router.replace("/");
+      // 로그아웃 후 로그인 화면으로 직접 이동
+      router.replace("/login");
     } catch (error) {
       console.error("로그아웃 오류:", error);
       Alert.alert("오류", "로그아웃 중 문제가 발생했습니다");
@@ -417,11 +455,12 @@ export default function ProfileScreen() {
           onPress={() => {}}
         /> */}
 
-        <MenuItem
+        <InfoItem
           icon="information-circle-outline"
           title="앱 정보"
-          subtitle="앱 정보 및 버전"
-          onPress={() => {}}
+          value={`가양주인(Gayangjuin) v${appVersion}`}
+          iconBgColor="#f0f4ff"
+          iconColor="#7584bd"
         />
 
         <TouchableOpacity className="mt-5 mb-10" onPress={handleLogout}>
