@@ -28,7 +28,7 @@ export default function EditProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user: authUser } = useAuth();
+  const { user: authUser, refreshSession } = useAuth();
 
   // 편집할 프로필 정보
   const [profile, setProfile] = useState<UserProfile>({
@@ -116,6 +116,18 @@ export default function EditProfileScreen() {
         .eq("id", authUser.id);
 
       if (updateError) throw updateError;
+
+      // Auth 사용자 메타데이터도 업데이트 (UI에 즉시 반영되도록)
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: { full_name: profile.name },
+      });
+
+      if (metadataError) {
+        console.error("사용자 메타데이터 업데이트 오류:", metadataError);
+      }
+
+      // Auth 컨텍스트의 사용자 정보 갱신
+      await refreshSession();
 
       Alert.alert("성공", "프로필이 업데이트되었습니다", [
         { text: "확인", onPress: () => router.back() },
@@ -264,25 +276,29 @@ export default function EditProfileScreen() {
         </ScrollView>
 
         {/* 하단 저장 버튼 (고정 위치) */}
-        <View className="absolute bottom-0 left-0 right-0 px-5 py-3 bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700">
-          <TouchableOpacity
-            className={`py-3 rounded-lg items-center ${
-              isSaving ? "bg-primary-300" : "bg-primary-500"
-            }`}
-            onPress={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <View className="flex-row items-center justify-center">
-                <ActivityIndicator size="small" color="white" />
-                <Text className="text-white font-semibold ml-2">
-                  저장 중...
-                </Text>
-              </View>
-            ) : (
-              <Text className="text-white font-semibold">저장하기</Text>
-            )}
-          </TouchableOpacity>
+        <View className=" dark:bg-neutral-800 border-t bg-white border-neutral-200 dark:border-neutral-700">
+          <View className="px-4 py-2">
+            <TouchableOpacity
+              className={`py-3 rounded-lg items-center border-[1px] ${
+                isSaving
+                  ? "bg-emerald-300 border-emerald-200"
+                  : "bg-emerald-500 border-emerald-400"
+              }`}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <View className="flex-row items-center justify-center px-5">
+                  <ActivityIndicator size="small" color="white" />
+                  <Text className="text-white font-semibold ml-2">
+                    저장 중...
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-white font-semibold">저장하기</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </>

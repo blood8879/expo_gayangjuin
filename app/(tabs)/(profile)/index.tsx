@@ -17,6 +17,8 @@ import { router } from "expo-router";
 import { theme } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useJournals } from "@/lib/query/journalQueries";
+import { useRecipes } from "@/lib/query/recipeQueries";
 
 interface UserProfile {
   name: string;
@@ -25,7 +27,7 @@ interface UserProfile {
   profileImage: string | null;
   recipes: number;
   journals: number;
-  events: number;
+  // events: number;
 }
 
 interface MenuItemProps {
@@ -50,6 +52,8 @@ export default function ProfileScreen() {
   const [error, setError] = React.useState<string | null>(null);
 
   const { user: authUser, signOut } = useAuth();
+  const { data: journalsData } = useJournals();
+  const { data: recipesData } = useRecipes();
 
   // 유저 정보 상태
   const [user, setUser] = React.useState<UserProfile>({
@@ -59,7 +63,6 @@ export default function ProfileScreen() {
     profileImage: null,
     recipes: 0,
     journals: 0,
-    events: 0,
   });
 
   // Supabase에서 사용자 프로필 정보 가져오기
@@ -86,11 +89,14 @@ export default function ProfileScreen() {
       }
 
       if (data) {
-        // 카운트 정보 가져오기 (실제 데이터 또는 API 연동)
-        // TODO: 실제 카운트는 별도 쿼리 필요 (현재는 더미 데이터)
-        const recipesCount = 0; // 실제로는 레시피 테이블 쿼리
-        const journalsCount = 0; // 실제로는 양조일지 테이블 쿼리
-        const eventsCount = 0; // 실제로는 시음회 테이블 쿼리
+        // 사용자가 작성한 레시피와 양조일지 개수 계산
+        const recipesCount =
+          recipesData?.filter((recipe) => recipe.user_id === authUser.id)
+            .length || 0;
+
+        const journalsCount =
+          journalsData?.filter((journal) => journal.user_id === authUser.id)
+            .length || 0;
 
         const userProfile: UserProfile = {
           name: data.full_name || authUser.user_metadata?.full_name || "",
@@ -99,7 +105,6 @@ export default function ProfileScreen() {
           profileImage: data.avatar_url || null,
           recipes: recipesCount,
           journals: journalsCount,
-          events: eventsCount,
         };
 
         setUser(userProfile);
@@ -115,7 +120,7 @@ export default function ProfileScreen() {
   // 컴포넌트 마운트 시 사용자 정보 로드
   useEffect(() => {
     fetchUserProfile();
-  }, [authUser]);
+  }, [authUser, recipesData, journalsData]);
 
   // 메뉴 아이템 컴포넌트
   const MenuItem: React.FC<MenuItemProps> = ({
@@ -274,31 +279,29 @@ export default function ProfileScreen() {
             {user.bio || "자기소개가 없습니다."}
           </Text>
 
-          <View className="flex-row justify-between border-t border-neutral-100 dark:border-neutral-700 pt-4">
-            <View className="items-center">
+          <View className="flex-row gap-12 border-t border-neutral-100 dark:border-neutral-700 pt-4">
+            <TouchableOpacity
+              className="items-center"
+              onPress={() => router.push("/(tabs)/(recipes)")}
+            >
               <Text className="text-neutral-900 dark:text-white font-bold text-lg">
                 {user.recipes}
               </Text>
               <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
                 레시피
               </Text>
-            </View>
-            <View className="items-center">
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="items-center"
+              onPress={() => router.push("/(tabs)/(journals)")}
+            >
               <Text className="text-neutral-900 dark:text-white font-bold text-lg">
                 {user.journals}
               </Text>
               <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
                 양조일지
               </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-neutral-900 dark:text-white font-bold text-lg">
-                {user.events}
-              </Text>
-              <Text className="text-neutral-500 dark:text-neutral-400 text-xs">
-                시음회
-              </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -311,28 +314,22 @@ export default function ProfileScreen() {
           icon="book-outline"
           title="내 레시피"
           subtitle="작성한 레시피 관리"
-          onPress={() => {
-            /* TODO: 내 레시피 화면으로 이동 */
-          }}
+          onPress={() => router.push("/(tabs)/(recipes)")}
         />
 
         <MenuItem
           icon="beer-outline"
           title="양조일지"
           subtitle="기록한 양조일지 보기"
-          onPress={() => {
-            /* TODO: 양조일지 화면으로 이동 */
-          }}
+          onPress={() => router.push("/(tabs)/(journals)")}
         />
 
-        <MenuItem
+        {/* <MenuItem
           icon="bookmark-outline"
           title="저장한 레시피"
           subtitle="다른 사용자의 레시피"
-          onPress={() => {
-            /* TODO: 저장한 레시피 화면으로 이동 */
-          }}
-        />
+          onPress={() => {}}
+        /> */}
 
         {/* 설정 */}
         <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-3 mt-5">
@@ -346,41 +343,37 @@ export default function ProfileScreen() {
           onValueChange={setPushNotification}
         />
 
-        <ToggleItem
+        {/* TODO: 다크 모드 추가 */}
+        {/* <ToggleItem
           icon="moon-outline"
           title="다크 모드"
           value={darkMode}
           onValueChange={setDarkMode}
-        />
+        /> */}
 
-        <MenuItem
+        {/* TODO: 개인정보 보호 화면 추가 */}
+        {/* <MenuItem
           icon="shield-outline"
           title="개인정보 보호"
           subtitle="개인정보 보호 설정"
-          onPress={() => {
-            /* TODO: 개인정보 보호 화면으로 이동 */
-          }}
-        />
+          onPress={() => {}}
+        /> */}
 
-        <MenuItem
+        {/* TODO: 도움말 화면 추가 */}
+        {/* <MenuItem
           icon="help-circle-outline"
           title="도움말"
           subtitle="도움말 및 지원"
-          onPress={() => {
-            /* TODO: 도움말 화면으로 이동 */
-          }}
-        />
+          onPress={() => {}}
+        /> */}
 
         <MenuItem
           icon="information-circle-outline"
           title="앱 정보"
           subtitle="앱 정보 및 버전"
-          onPress={() => {
-            /* TODO: 앱 정보 화면으로 이동 */
-          }}
+          onPress={() => {}}
         />
 
-        {/* 로그아웃 버튼 */}
         <TouchableOpacity className="mt-5 mb-10" onPress={handleLogout}>
           <View className="bg-neutral-100 dark:bg-neutral-800 rounded-[12px] py-4 flex-row items-center justify-center">
             <Ionicons name="log-out-outline" size={20} color="#f87171" />

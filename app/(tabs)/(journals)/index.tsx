@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useJournals } from "@/lib/query/journalQueries";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { useIsFocused } from "@react-navigation/native";
 
 // 레시피 타입 정의
 type RecipeType =
@@ -30,7 +31,15 @@ type CategoryType = "약주" | "과실주" | "전통주" | "막걸리" | "약주
 
 export default function JournalsScreen() {
   const { user } = useAuth();
-  const { data: journalsData, isLoading, error } = useJournals();
+  const { data: journalsData, isLoading, error, refetch } = useJournals();
+  const isFocused = useIsFocused();
+
+  // 화면이 포커스될 때마다 데이터 새로고침
+  useEffect(() => {
+    if (isFocused) {
+      refetch();
+    }
+  }, [isFocused, refetch]);
 
   // 카테고리별 색상 정보
   const categoryColors: Record<CategoryType, { bg: string; text: string }> = {
