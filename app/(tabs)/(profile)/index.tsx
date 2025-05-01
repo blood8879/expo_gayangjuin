@@ -27,6 +27,7 @@ interface UserProfile {
   profileImage: string | null;
   recipes: number;
   journals: number;
+  pushNotificationEnabled: boolean;
   // events: number;
 }
 
@@ -43,12 +44,14 @@ interface ToggleItemProps {
   title: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
+  isLoading?: boolean;
 }
 
 export default function ProfileScreen() {
   const [darkMode, setDarkMode] = React.useState(false);
-  const [pushNotification, setPushNotification] = React.useState(true);
+  const [pushNotification, setPushNotification] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isPushLoading, setIsPushLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const { user: authUser, signOut } = useAuth();
@@ -63,6 +66,7 @@ export default function ProfileScreen() {
     profileImage: null,
     recipes: 0,
     journals: 0,
+    pushNotificationEnabled: false,
   });
 
   // Supabase에서 사용자 프로필 정보 가져오기
@@ -80,7 +84,7 @@ export default function ProfileScreen() {
       // users 테이블에서 현재 로그인한 사용자 정보 가져오기
       const { data, error: fetchError } = await supabase
         .from("users")
-        .select("full_name, email, bio, avatar_url")
+        .select("full_name, email, bio, avatar_url, push_notification_enabled")
         .eq("id", authUser.id)
         .single();
 
@@ -105,15 +109,52 @@ export default function ProfileScreen() {
           profileImage: data.avatar_url || null,
           recipes: recipesCount,
           journals: journalsCount,
+          pushNotificationEnabled: data.push_notification_enabled || false,
         };
 
         setUser(userProfile);
+        setPushNotification(data.push_notification_enabled || false);
       }
     } catch (err: any) {
       console.error("사용자 프로필 로드 오류:", err);
       setError("프로필 정보를 불러오는 데 실패했습니다");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 푸시 알림 설정 저장
+  const handlePushNotificationChange = async (value: boolean) => {
+    if (!authUser) {
+      Alert.alert("오류", "로그인이 필요합니다");
+      return;
+    }
+
+    try {
+      setIsPushLoading(true);
+      setPushNotification(value); // UI 즉시 업데이트
+
+      const { error } = await supabase
+        .from("users")
+        .update({ push_notification_enabled: value })
+        .eq("id", authUser.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // 사용자 상태 업데이트
+      setUser((prev) => ({
+        ...prev,
+        pushNotificationEnabled: value,
+      }));
+    } catch (err: any) {
+      console.error("푸시 알림 설정 오류:", err);
+      // 오류 발생 시 이전 값으로 되돌림
+      setPushNotification(!value);
+      Alert.alert("오류", "푸시 알림 설정을 저장하는 데 실패했습니다");
+    } finally {
+      setIsPushLoading(false);
     }
   };
 
@@ -162,6 +203,7 @@ export default function ProfileScreen() {
     title,
     value,
     onValueChange,
+    isLoading,
   }) => (
     <View className="flex-row items-center py-3 px-4 bg-white dark:bg-neutral-800 rounded-[12px] shadow-sm mb-3">
       <View
@@ -173,12 +215,19 @@ export default function ProfileScreen() {
       <Text className="flex-1 text-neutral-900 dark:text-white font-medium">
         {title}
       </Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: theme.neutral[300], true: theme.primary.DEFAULT }}
-        thumbColor="white"
-      />
+      {isLoading ? (
+        <ActivityIndicator size="small" color={theme.primary.DEFAULT} />
+      ) : (
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{
+            false: theme.neutral[300],
+            true: theme.primary.DEFAULT,
+          }}
+          thumbColor="white"
+        />
+      )}
     </View>
   );
 
@@ -340,7 +389,8 @@ export default function ProfileScreen() {
           icon="notifications-outline"
           title="푸시 알림"
           value={pushNotification}
-          onValueChange={setPushNotification}
+          onValueChange={handlePushNotificationChange}
+          isLoading={isPushLoading}
         />
 
         {/* TODO: 다크 모드 추가 */}
