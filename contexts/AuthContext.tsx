@@ -102,20 +102,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       GoogleSignin.configure({
-        scopes: ["https://www.googleapis.com/auth/drive.readonly"],
         webClientId:
           "464345605389-619ib62kn4sm2oojv9ljnmi3i5p9maq9.apps.googleusercontent.com",
+        offlineAccess: true,
       });
 
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
+      const userInfo = await GoogleSignin.signInSilently();
+
       console.log("🔥 userInfo:", userInfo);
+
+      if (userInfo.data?.idToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: userInfo.data.idToken,
+        });
+        console.log(error, data);
+      } else {
+        throw new Error("no ID token present!");
+      }
       // 세션 확인 및 사용자 정보 가져오기
       await refreshSession();
 
       return;
     } catch (error) {
-      console.error("구글 로그인 오류:", error);
+      console.error("구글 로그인 오류:", JSON.stringify(error, null, 2));
       throw error;
     } finally {
       setIsLoading(false);
