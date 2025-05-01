@@ -7,14 +7,11 @@ import {
 } from "../lib/api/auth";
 import { supabase } from "../lib/supabase";
 import { User, Session } from "@supabase/supabase-js";
-import {
-  getProfile,
-  KakaoProfile,
-  login,
-} from "@react-native-seoul/kakao-login";
-import { router } from "expo-router";
+
 import { Alert } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { router } from "expo-router";
 
 type AuthContextType = {
   user: User | null;
@@ -104,7 +101,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithGoogleAuth = async () => {
     try {
       setIsLoading(true);
+      GoogleSignin.configure({
+        scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+        webClientId:
+          "464345605389-619ib62kn4sm2oojv9ljnmi3i5p9maq9.apps.googleusercontent.com",
+      });
 
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      console.log("🔥 userInfo:", userInfo);
       // 세션 확인 및 사용자 정보 가져오기
       await refreshSession();
 
@@ -127,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       let token;
       try {
-        token = await login();
+        // token = await login();
         console.log("🔥 token:", token);
       } catch (error) {
         console.error("🔥 login() 내부에서 에러 발생:", error);
@@ -136,30 +141,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // console.log("✅ 카카오 로그인 성공:", token);
 
-      if (!token || !token.accessToken) {
-        throw new Error("카카오 로그인 실패: 액세스 토큰이 없음");
-      }
+      // if (!token || !token.accessToken) {
+      //   throw new Error("카카오 로그인 실패: 액세스 토큰이 없음");
+      // }
 
-      console.log("🔄 카카오 프로필 가져오는 중...");
-      const kakaoProfile: KakaoProfile = await getProfile();
-      console.log("✅ Kakao profile:", kakaoProfile);
+      // console.log("🔄 카카오 프로필 가져오는 중...");
+      // const kakaoProfile: KakaoProfile = await getProfile();
+      // console.log("✅ Kakao profile:", kakaoProfile);
 
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: "kakao",
-        token: token.idToken,
-      });
+      // const { data, error } = await supabase.auth.signInWithIdToken({
+      //   provider: "kakao",
+      //   token: token.idToken,
+      // });
 
-      if (error) {
-        console.error("❌ Supabase 로그인 오류:", error);
-        Alert.alert("로그인 실패", "Supabase 로그인 중 오류 발생.");
-        return;
-      }
+      // if (error) {
+      //   console.error("❌ Supabase 로그인 오류:", error);
+      //   Alert.alert("로그인 실패", "Supabase 로그인 중 오류 발생.");
+      //   return;
+      // }
 
-      console.log("✅ Supabase 로그인 성공:", data.user?.id);
+      // console.log("✅ Supabase 로그인 성공:", data.user?.id);
 
       // 로그인 성공 후 세션 상태 갱신
-      setSession(data.session);
-      setUser(data.user);
+      // setSession(data.session);
+      // setUser(data.user);
 
       // 로그인 완료 후 세션 상태 확인
       setTimeout(async () => {
