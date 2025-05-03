@@ -17,6 +17,7 @@ import { StatusBar } from "expo-status-bar";
 import { queryClient } from "@/lib/query/queryClient";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
+import { initializeKakaoSDK } from "@react-native-kakao/core";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -31,6 +32,10 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });
+
+  useEffect(() => {
+    initializeKakaoSDK("6c58516c278c4c86f674c30fa5efbfbe");
+  }, []);
 
   useEffect(() => {
     if (error) throw error;

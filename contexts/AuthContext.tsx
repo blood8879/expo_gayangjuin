@@ -12,6 +12,7 @@ import { Alert } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
+import { login, me } from "@react-native-kakao/user";
 
 type AuthContextType = {
   user: User | null;
@@ -140,48 +141,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       console.log("🔄 카카오 로그인 시도 중...");
 
-      let token;
-      try {
-        // token = await login();
+      // const token = await login();
+      // console.log("🔥 token:", token);
+      // const userInfo = await me();
+      // console.log("🔥 userInfo:", userInfo);
+
+      Promise.all([login(), me()]).then(async ([token, userInfo]) => {
         console.log("🔥 token:", token);
-      } catch (error) {
-        console.error("🔥 login() 내부에서 에러 발생:", error);
-        throw error;
-      }
+        console.log("🔥 userInfo:", userInfo);
+        if (!token || !token.idToken) {
+          // 사용자에게 알림을 표시하거나 다른 방식으로 처리할 수 있습니다.
+          Alert.alert("로그인 실패", "로그인을 다시 시도해 주세요.");
+          // idToken이 없으면 Supabase 로그인을 시도할 수 없으므로 함수를 종료합니다.
+          // 또는 accessToken만 사용하는 다른 로직을 수행할 수 있습니다.
+          return;
+        }
 
-      // console.log("✅ 카카오 로그인 성공:", token);
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: "kakao",
+          token: token.idToken,
+        });
 
-      // if (!token || !token.accessToken) {
-      //   throw new Error("카카오 로그인 실패: 액세스 토큰이 없음");
-      // }
+        setSession(data.session);
+        setUser(data.user);
 
-      // console.log("🔄 카카오 프로필 가져오는 중...");
-      // const kakaoProfile: KakaoProfile = await getProfile();
-      // console.log("✅ Kakao profile:", kakaoProfile);
-
-      // const { data, error } = await supabase.auth.signInWithIdToken({
-      //   provider: "kakao",
-      //   token: token.idToken,
-      // });
-
-      // if (error) {
-      //   console.error("❌ Supabase 로그인 오류:", error);
-      //   Alert.alert("로그인 실패", "Supabase 로그인 중 오류 발생.");
-      //   return;
-      // }
-
-      // console.log("✅ Supabase 로그인 성공:", data.user?.id);
-
-      // 로그인 성공 후 세션 상태 갱신
-      // setSession(data.session);
-      // setUser(data.user);
-
-      // 로그인 완료 후 세션 상태 확인
-      setTimeout(async () => {
-        await refreshSession();
-        console.log("로그인 후 세션 확인 완료");
-        router.replace("/(tabs)"); // 로그인 후 이동
-      }, 500);
+        setTimeout(async () => {
+          await refreshSession();
+          if (data.user?.id) {
+            router.replace("/(tabs)"); // 로그인 후 이동
+          }
+        }, 500);
+      });
     } catch (error: any) {
       console.error("❌ Kakao sign-in error (전체):", error);
       Alert.alert(
@@ -190,11 +180,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
     } finally {
       setIsLoading(false);
-      await WebBrowser.coolDownAsync();
+      // await WebBrowser.coolDownAsync();
     }
   };
 
-  // 로그아웃
   const signOutUser = async () => {
     try {
       setIsLoading(true);
