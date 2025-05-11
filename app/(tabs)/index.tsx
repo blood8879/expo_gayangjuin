@@ -11,25 +11,16 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useRecipes } from "@/lib/query/recipeQueries";
 
 export default function HomeScreen() {
-  // 더미 데이터
-  const recentRecipes = [
-    {
-      id: 1,
-      title: "전통 막걸리",
-      type: "막걸리",
-      days: 7,
-      progress: 45,
-    },
-    {
-      id: 2,
-      title: "매실주",
-      type: "과실주",
-      days: 30,
-      progress: 25,
-    },
-  ];
+  // useRecipes 훅 사용
+  const { data: recipesData, isLoading } = useRecipes();
+
+  // 최근 레시피 최대 4개만 추출 (created_at 기준 내림차순)
+  const recentRecipes = (recipesData || [])
+    .sort((a, b) => (b.created_at || 0).localeCompare(a.created_at || 0))
+    .slice(0, 4);
 
   const recentJournals = [
     {
@@ -162,7 +153,7 @@ export default function HomeScreen() {
             <Text className="text-neutral-800 text-xl font-bold">
               최근 레시피
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/recipes/")}>
               <Text className="text-[#4a91db] text-sm">더보기</Text>
             </TouchableOpacity>
           </View>
@@ -172,69 +163,95 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             className="pb-2"
           >
-            {recentRecipes.map((recipe) => (
-              <TouchableOpacity
-                key={recipe.id}
-                className="mr-4 w-[180px]"
-                onPress={() => router.push(`/recipes/${recipe.id}`)}
-              >
-                <View className="bg-white rounded-[12px] shadow-sm p-4 h-[160px]">
-                  <View className="flex-row justify-between mb-2">
-                    <View
-                      className={`px-2.5 py-1 rounded-full ${
-                        recipe.type === "막걸리"
-                          ? "bg-[#e7f7ee]"
-                          : "bg-[#ffeee6]"
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-medium ${
-                          recipe.type === "막걸리"
-                            ? "text-[#56bb7f]"
-                            : "text-[#e8845e]"
-                        }`}
-                      >
-                        {recipe.type}
+            {isLoading ? (
+              <View className="justify-center items-center w-[180px] h-[160px]">
+                <Text className="text-neutral-400">로딩 중...</Text>
+              </View>
+            ) : (
+              <>
+                {recentRecipes.map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.id}
+                    className="mr-4 w-[180px]"
+                    onPress={() => router.push(`/recipes/${recipe.id}`)}
+                  >
+                    <View className="bg-white rounded-[12px] shadow-sm p-4 h-[160px]">
+                      <View className="flex-row justify-between mb-2">
+                        <View
+                          className={`px-2.5 py-1 rounded-full ${
+                            recipe.type === "막걸리"
+                              ? "bg-[#e7f7ee]"
+                              : recipe.type === "과실주"
+                              ? "bg-[#ffeee6]"
+                              : recipe.type === "약주/청주"
+                              ? "bg-[#f4e8ff]"
+                              : "bg-[#e6f2fe]"
+                          }`}
+                        >
+                          <Text
+                            className={`text-xs font-medium ${
+                              recipe.type === "막걸리"
+                                ? "text-[#56bb7f]"
+                                : recipe.type === "과실주"
+                                ? "text-[#e8845e]"
+                                : recipe.type === "약주/청주"
+                                ? "text-[#a47ad1]"
+                                : "text-[#4a91db]"
+                            }`}
+                          >
+                            {recipe.type}
+                          </Text>
+                        </View>
+                        <Text className="text-neutral-400 text-xs">
+                          {recipe.total_duration_days || 0}일째
+                        </Text>
+                      </View>
+
+                      <Text className="text-neutral-800 text-base font-bold mb-1 mt-1">
+                        {recipe.name}
+                      </Text>
+
+                      <View className="flex-1 justify-end">
+                        <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
+                          <View
+                            className={`h-full rounded-full ${
+                              recipe.type === "막걸리"
+                                ? "bg-[#56bb7f]"
+                                : recipe.type === "과실주"
+                                ? "bg-[#e8845e]"
+                                : recipe.type === "약주/청주"
+                                ? "bg-[#a47ad1]"
+                                : "bg-[#4a91db]"
+                            }`}
+                            style={{ width: `${recipe.progress || 0}%` }}
+                          />
+                        </View>
+                        <Text className="text-neutral-400 text-xs font-medium">
+                          {recipe.progress || 0}% 완료
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {/* 레시피가 4개 이하일 때 항상 마지막에 버튼 보임 */}
+                {recentRecipes.length <= 4 && (
+                  <TouchableOpacity
+                    className="mr-4 w-[180px]"
+                    onPress={() => router.push("/recipes/create")}
+                  >
+                    <View className="bg-white rounded-[12px] shadow-sm p-4 h-[160px] justify-center items-center border border-gray-100">
+                      <View className="w-12 h-12 rounded-full bg-[#f3f4f6] items-center justify-center mb-2">
+                        <Ionicons name="add" size={24} color="#9ca3af" />
+                      </View>
+                      <Text className="text-neutral-500 text-sm font-medium">
+                        새 레시피 추가
                       </Text>
                     </View>
-                    <Text className="text-neutral-400 text-xs">
-                      {recipe.days}일째
-                    </Text>
-                  </View>
-
-                  <Text className="text-neutral-800 text-base font-bold mb-1 mt-1">
-                    {recipe.title}
-                  </Text>
-
-                  <View className="flex-1 justify-end">
-                    <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
-                      <View
-                        className={`h-full rounded-full ${
-                          recipe.type === "막걸리"
-                            ? "bg-[#56bb7f]"
-                            : "bg-[#e8845e]"
-                        }`}
-                        style={{ width: `${recipe.progress}%` }}
-                      />
-                    </View>
-                    <Text className="text-neutral-400 text-xs font-medium">
-                      {recipe.progress}% 완료
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-
-            <TouchableOpacity className="mr-4 w-[180px]">
-              <View className="bg-white rounded-[12px] shadow-sm p-4 h-[160px] justify-center items-center border border-gray-100">
-                <View className="w-12 h-12 rounded-full bg-[#f3f4f6] items-center justify-center mb-2">
-                  <Ionicons name="add" size={24} color="#9ca3af" />
-                </View>
-                <Text className="text-neutral-500 text-sm font-medium">
-                  새 레시피 추가
-                </Text>
-              </View>
-            </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
           </ScrollView>
         </View>
 
