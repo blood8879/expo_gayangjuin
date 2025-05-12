@@ -153,7 +153,7 @@ export default function HomeScreen() {
             <Text className="text-neutral-800 text-xl font-bold">
               최근 레시피
             </Text>
-            <TouchableOpacity onPress={() => router.push("/recipes/")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/(recipes)")}>
               <Text className="text-[#4a91db] text-sm">더보기</Text>
             </TouchableOpacity>
           </View>
