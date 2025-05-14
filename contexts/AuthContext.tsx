@@ -108,9 +108,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         offlineAccess: true,
       });
 
-      const userInfo = await GoogleSignin.signInSilently();
+      // const userInfo = await GoogleSignin.hasPlayServices();
+      // console.log("🔥 userInfo:", userInfo);
+
+      const userInfo = await GoogleSignin.signIn();
 
       console.log("🔥 userInfo:", userInfo);
+
+      // const userInfo = await GoogleSignin.signInSilently();
+
+      // console.log("🔥 userInfo:", userInfo);
 
       if (userInfo.data?.idToken) {
         const { data, error } = await supabase.auth.signInWithIdToken({

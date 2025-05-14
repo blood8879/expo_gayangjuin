@@ -116,7 +116,7 @@ export default function LoginScreen() {
                 </View>
               ) : (
                 <>
-                  <Button
+                  {/* <Button
                     size="lg"
                     iconPosition="left"
                     style={{
@@ -140,7 +140,7 @@ export default function LoginScreen() {
                     ) : (
                       "구글로 시작하기"
                     )}
-                  </Button>
+                  </Button> */}
 
                   <Button
                     size="lg"
