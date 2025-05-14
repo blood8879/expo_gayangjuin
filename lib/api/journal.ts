@@ -141,13 +141,15 @@ export async function saveJournalRecord(
 /**
  * 양조일지 목록 조회 함수
  */
-export async function getJournals() {
-  console.log("저널 목록 조회 시도");
+export async function getJournals(userId?: string) {
+  console.log(
+    "저널 목록 조회 시도",
+    userId ? `사용자 ID: ${userId}` : "모든 저널"
+  );
 
-  const { data, error } = await supabase
-    .from("journals")
-    .select(
-      `
+  // 쿼리 객체 생성
+  let query = supabase.from("journals").select(
+    `
       *,
       recipes:recipe_id (
         id,
@@ -165,8 +167,15 @@ export async function getJournals() {
         )
       )
     `
-    )
-    .order("created_at", { ascending: false });
+  );
+
+  // 사용자 ID가 제공된 경우 해당 사용자의 저널만 필터링
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  // 정렬 및 실행
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     console.error("저널 목록 조회 에러:", error);

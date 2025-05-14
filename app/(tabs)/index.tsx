@@ -42,6 +42,8 @@ export default function HomeScreen() {
     },
   ];
 
+  console.log("recipesData", recipesData);
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar style="dark" />
@@ -194,15 +196,19 @@ export default function HomeScreen() {
                             {recipe.type}
                           </Text>
                         </View>
+
                         {/* <Text className="text-neutral-400 text-xs">
                           {recipe.total_duration_days || 0}일째
                         </Text> */}
                       </View>
-
-                      <Text className="text-neutral-800 text-base font-bold mb-1 mt-1">
+                      <Text className="text-neutral-800 text-xl font-bold mb-1 mt-1">
                         {recipe.name}
                       </Text>
-
+                      <View className="flex-1 justify-end">
+                        <Text className="text-neutral-400 text-xs font-medium">
+                          총 {recipe.recipe_stages?.length || 0} 단계 레시피
+                        </Text>
+                      </View>
                       {/* <View className="flex-1 justify-end">
                         <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
                           <View
@@ -222,6 +228,7 @@ export default function HomeScreen() {
                           {recipe.progress || 0}% 완료
                         </Text>
                       </View> */}
+                      123
                     </View>
                   </TouchableOpacity>
                 ))}

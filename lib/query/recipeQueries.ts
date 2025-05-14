@@ -11,14 +11,18 @@ import {
   RecipeFormData,
 } from "../api/recipe";
 import { recipeKeys } from "./queryClient";
+import { useAuth } from "../../contexts/AuthContext";
 
 /**
  * 레시피 목록을 가져오는 쿼리 훅
  */
 export function useRecipes() {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: recipeKeys.lists(),
-    queryFn: getRecipes,
+    queryFn: () => getRecipes(user?.id),
+    enabled: !!user?.id,
   });
 }
 

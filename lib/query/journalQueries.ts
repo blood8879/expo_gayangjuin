@@ -33,7 +33,7 @@ export function useJournals() {
       // 디버깅 메시지만 출력
       console.log("양조일지 데이터 조회 중...");
 
-      return getJournals();
+      return getJournals(user?.id);
     },
     enabled: !!user?.id,
   });

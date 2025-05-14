@@ -121,18 +121,27 @@ export async function saveSteps(steps: Omit<Step, "id" | "created_at">[]) {
 /**
  * 레시피 목록 조회 함수
  */
-export async function getRecipes() {
-  console.log("레시피 목록 조회 요청");
+export async function getRecipes(userId?: string) {
+  console.log(
+    "레시피 목록 조회 요청",
+    userId ? `사용자 ID: ${userId}` : "모든 레시피"
+  );
 
-  const { data, error } = await supabase
-    .from("recipes")
-    .select(
-      `
+  // 쿼리 객체 생성
+  let query = supabase.from("recipes").select(
+    `
       *,
       recipe_stages(*)
     `
-    )
-    .order("created_at", { ascending: false });
+  );
+
+  // 사용자 ID가 제공된 경우 해당 사용자의 레시피만 필터링
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  // 정렬 및 실행
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     console.error("레시피 목록 조회 에러:", error);

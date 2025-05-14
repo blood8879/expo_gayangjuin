@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "966504247726",
+    "project_id": "gayangjuin-6fcf5",
+    "storage_bucket": "gayangjuin-6fcf5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966504247726:android:fd964424e8ca77812bd83f",
+        "android_client_info": {
+          "package_name": "com.jiamyun.expogayangjuin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "966504247726-petl440ftb0bsn7amjd1q65ekder6jga.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jiamyun.expogayangjuin",
+            "certificate_hash": "9e500503754233750d659487c918889918720ecb"
+          }
+        },
+        {
+          "client_id": "966504247726-strssnuqf4mprvps86qstcoj0i2ms84u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jiamyun.expogayangjuin",
+            "certificate_hash": "ba63e9c1cb0bb06dd5d04dbcb74a57dca1320343"
+          }
+        },
+        {
+          "client_id": "966504247726-vnol7lceddapcc7k3l1nejbs2d5o70s7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdWVq0GbNwoTdU98rlQ3nZ6V6ZAOqi66g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "966504247726-vnol7lceddapcc7k3l1nejbs2d5o70s7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
