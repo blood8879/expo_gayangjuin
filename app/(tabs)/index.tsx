@@ -228,7 +228,6 @@ export default function HomeScreen() {
                           {recipe.progress || 0}% 완료
                         </Text>
                       </View> */}
-                      123
                     </View>
                   </TouchableOpacity>
                 ))}
