@@ -98,7 +98,15 @@ export default function RecipesScreen() {
         id: recipe.id,
         title: recipe.name, // DB의 name 필드를 title로 표시
         type: recipe.type as "막걸리" | "과실주" | "약주/청주" | "전통주",
-        days: recipe.total_duration_days || 0,
+        // recipe_stages가 있고, 각 stage에 duration_days가 있다고 가정합니다.
+        // 만약 필드명이 다르거나 구조가 다르면 이 부분을 수정해야 합니다.
+        days:
+          recipe.recipe_stages && Array.isArray(recipe.recipe_stages)
+            ? recipe.recipe_stages.reduce(
+                (acc: number, stage: any) => acc + (stage.duration_days || 0),
+                0
+              )
+            : recipe.total_duration_days || 0, // 기존 로직 유지 (stages 정보가 없을 경우)
         progress: 0, // 진행 상태는 아직 구현되지 않음
         isPublic: recipe.is_public,
         star: 0, // 리뷰 기능 구현 전

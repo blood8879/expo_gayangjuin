@@ -463,7 +463,7 @@ export default function RecipeDetailScreen() {
         </View>
 
         {/* 알코올 도수 계산 버튼 */}
-        <View className="px-5 mb-8">
+        {/* <View className="px-5 mb-8">
           <TouchableOpacity>
             <Card
               elevation="none"
@@ -495,10 +495,10 @@ export default function RecipeDetailScreen() {
               </View>
             </Card>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* 공개 설정 */}
-        <View className="px-5 mb-8">
+        {/* <View className="px-5 mb-8">
           <Card elevation="none" className="p-4 bg-white rounded-[8px]">
             <View className="flex-row justify-between items-center">
               <View>
@@ -522,7 +522,7 @@ export default function RecipeDetailScreen() {
               </TouchableOpacity>
             </View>
           </Card>
-        </View>
+        </View> */}
       </ScrollView>
 
       {/* 하단 버튼 영역 */}
