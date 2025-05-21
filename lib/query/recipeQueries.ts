@@ -9,6 +9,7 @@ import {
   updateIngredients,
   updateSteps,
   RecipeFormData,
+  deleteRecipeById,
 } from "../api/recipe";
 import { recipeKeys } from "./queryClient";
 import { useAuth } from "../../contexts/AuthContext";
@@ -135,6 +136,28 @@ export function useUpdateRecipe() {
         queryKey: recipeKeys.detail(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: recipeKeys.lists() });
+    },
+  });
+}
+
+/**
+ * 레시피 삭제를 위한 뮤테이션 훅
+ */
+export function useDeleteRecipe() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteRecipeById,
+    onSuccess: (data, variables) => {
+      console.log(
+        `Recipe with ID: ${variables} deleted successfully from hook.`
+      );
+
+      queryClient.invalidateQueries({ queryKey: recipeKeys.lists() });
+      queryClient.removeQueries({ queryKey: recipeKeys.detail(variables) });
+    },
+    onError: (error) => {
+      console.error("Error deleting recipe from hook:", error);
     },
   });
 }

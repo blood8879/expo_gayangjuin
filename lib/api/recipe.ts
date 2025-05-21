@@ -228,6 +228,52 @@ export async function getRecipeById(id: string) {
 }
 
 /**
+ * 레시피 삭제 함수
+ */
+export async function deleteRecipeById(recipeId: string) {
+  // 먼저 관련된 자식 테이블의 데이터를 삭제합니다.
+  // Supabase에서 onDelete: 'cascade' 설정을 했다면 이 과정이 자동으로 처리될 수 있습니다.
+  // 여기서는 명시적으로 관련된 데이터를 먼저 삭제하는 예시를 보여줍니다.
+  // 실제로는 트랜잭션 처리가 필요할 수 있습니다.
+
+  const { error: ingredientsError } = await supabase
+    .from("recipe_ingredients")
+    .delete()
+    .eq("recipe_id", recipeId);
+
+  if (ingredientsError) {
+    console.error("레시피 재료 삭제 에러:", ingredientsError);
+    throw ingredientsError;
+  }
+
+  const { error: stagesError } = await supabase
+    .from("recipe_stages")
+    .delete()
+    .eq("recipe_id", recipeId);
+
+  if (stagesError) {
+    console.error("레시피 단계 삭제 에러:", stagesError);
+    throw stagesError;
+  }
+
+  // 마지막으로 레시피 본체를 삭제합니다.
+  const { error: recipeError } = await supabase
+    .from("recipes")
+    .delete()
+    .eq("id", recipeId);
+
+  if (recipeError) {
+    console.error("레시피 삭제 에러:", recipeError);
+    throw recipeError;
+  }
+
+  console.log(
+    `Recipe with ID: ${recipeId} and its related data deleted successfully.`
+  );
+  return { success: true, id: recipeId };
+}
+
+/**
  * 기존 스키마와의 호환성을 위한 함수들
  */
 export async function saveLegacyRecipe(recipe: {

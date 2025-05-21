@@ -73,7 +73,7 @@ export default function HomeScreen() {
 
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
         {/* 홈 배너 카드 */}
-        <View className="mb-6">
+        {/* <View className="mb-6">
           <View className="bg-white rounded-[12px] shadow-sm overflow-hidden">
             <LinearGradient
               colors={["#f8e4d0", "#ffe9d4"]}
@@ -102,7 +102,7 @@ export default function HomeScreen() {
               </View>
             </LinearGradient>
           </View>
-        </View>
+        </View> */}
 
         {/* 카테고리 메뉴 */}
         {/* <View className="mb-8">

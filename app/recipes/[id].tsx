@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { theme } from "@/constants/theme";
 import { Card } from "@/components/ui/Card";
-import { useRecipe } from "@/lib/query/recipeQueries";
+import { useRecipe, useDeleteRecipe } from "@/lib/query/recipeQueries";
 import { useJournals } from "@/lib/query/journalQueries";
 
 // 타입 정의 추가
@@ -55,9 +55,11 @@ interface RecipeDetail {
 export default function RecipeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
 
   // React Query 사용
   const { data: recipe, isLoading, isError, error } = useRecipe(id as string);
+  const deleteRecipeMutation = useDeleteRecipe();
 
   // 모든 양조일지 목록 조회
   const { data: allJournals } = useJournals();
@@ -145,6 +147,40 @@ export default function RecipeDetailScreen() {
       })),
   };
 
+  const handleMoreOptionsPress = () => {
+    setIsMenuVisible(!isMenuVisible);
+  };
+
+  const handleEditRecipe = () => {
+    setIsMenuVisible(false);
+    router.push(`/recipes/edit/${recipeData.id}`);
+  };
+
+  const handleDeleteRecipe = () => {
+    setIsMenuVisible(false);
+    Alert.alert(
+      "레시피 삭제",
+      "정말로 이 레시피를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "삭제",
+          onPress: async () => {
+            try {
+              await deleteRecipeMutation.mutateAsync(recipeData.id as string);
+              Alert.alert("성공", "레시피가 성공적으로 삭제되었습니다.");
+              router.back();
+            } catch (e) {
+              console.error("레시피 삭제 실패:", e);
+              Alert.alert("오류", "레시피 삭제 중 오류가 발생했습니다.");
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar style="dark" />
@@ -165,14 +201,54 @@ export default function RecipeDetailScreen() {
               color={theme.neutral[600]}
             />
           </TouchableOpacity>
-          <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-white">
+          <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-white mr-3">
             <Ionicons
               name="bookmark-outline"
               size={22}
               color={theme.neutral[600]}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            className="w-10 h-10 items-center justify-center rounded-full bg-white"
+            onPress={handleMoreOptionsPress}
+          >
+            <Ionicons
+              name="ellipsis-vertical"
+              size={22}
+              color={theme.neutral[600]}
+            />
+          </TouchableOpacity>
         </View>
+
+        {/* 더보기 메뉴 */}
+        {isMenuVisible && (
+          <View className="absolute top-24 right-5 bg-white rounded-md shadow-lg p-2 z-50 w-40">
+            <TouchableOpacity
+              className="py-2 px-3 flex-row items-center"
+              onPress={handleEditRecipe}
+            >
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color={theme.neutral[700]}
+                className="mr-2"
+              />
+              <Text className="text-neutral-700">레시피 수정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="py-2 px-3 flex-row items-center"
+              onPress={handleDeleteRecipe}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={18}
+                color={theme.status.error}
+                className="mr-2"
+              />
+              <Text style={{ color: theme.status.error }}>레시피 삭제</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -458,17 +534,6 @@ export default function RecipeDetailScreen() {
             <Card elevation="none" className="p-4 bg-emerald-50 rounded-[8px]">
               <Text className="text-center font-medium text-emerald-700">
                 양조일지 시작하기
-              </Text>
-            </Card>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-1"
-            onPress={() => router.push(`/recipes/edit/${recipeData.id}`)}
-          >
-            <Card elevation="none" className="p-4 bg-emerald-500 rounded-[8px]">
-              <Text className="text-center font-bold text-white">
-                레시피 수정
               </Text>
             </Card>
           </TouchableOpacity>
