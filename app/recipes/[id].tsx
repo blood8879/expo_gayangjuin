@@ -122,7 +122,10 @@ export default function RecipeDetailScreen() {
     title: recipe.name, // DB의 name 필드를 title로 표시
     type: recipe.type,
     days: recipe.total_duration_days || 0,
-    totalDays: recipe.total_duration_days || 0,
+    totalDays: recipe.recipe_stages.reduce(
+      (acc: number, stage: any) => acc + (stage.duration_days || 0),
+      0
+    ), // 각 단계의 duration_days를 합산
     progress: 0, // 진행 상태는 아직 구현되지 않음
     description: recipe.description,
     createdAt: recipe.created_at,
@@ -288,12 +291,12 @@ export default function RecipeDetailScreen() {
                     예상 소요일: {recipeData.totalDays || 0}일
                   </Text>
                 </View>
-                <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
+                {/* <View className="flex-row items-center bg-white/30 px-3 py-1.5 rounded-full">
                   <Ionicons name="wine-outline" size={16} color="#1f6b46" />
                   <Text className="text-emerald-800 ml-1 text-xs font-medium">
                     예상 도수: {recipeData.estimatedAlcohol || 0}%
                   </Text>
-                </View>
+                </View> */}
               </View>
             </View>
           </Card>
