@@ -17,7 +17,7 @@ PODS:
     - React-Core
   - Expo (52.0.46):
     - ExpoModulesCore
-  - ExpoAdapterGoogleSignIn (13.2.0):
+  - ExpoAdapterGoogleSignIn (13.3.1):
     - ExpoModulesCore
     - GoogleSignIn (~> 7.1)
     - React-Core
@@ -1758,7 +1758,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNCKakaoCore (2.3.0):
+  - RNCKakaoCore (2.4.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1780,7 +1780,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNCKakaoUser (2.3.0):
+  - RNCKakaoUser (2.4.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1824,7 +1824,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNGoogleSignin (13.2.0):
+  - RNGoogleSignin (13.3.1):
     - DoubleConversion
     - glog
     - GoogleSignIn (~> 7.1)
@@ -1846,7 +1846,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNReanimated (3.16.7):
+  - RNReanimated (3.16.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1866,10 +1866,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated (= 3.16.7)
-    - RNReanimated/worklets (= 3.16.7)
+    - RNReanimated/reanimated (= 3.16.2)
+    - RNReanimated/worklets (= 3.16.2)
     - Yoga
-  - RNReanimated/reanimated (3.16.7):
+  - RNReanimated/reanimated (3.16.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1889,9 +1889,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated/apple (= 3.16.7)
+    - RNReanimated/reanimated/apple (= 3.16.2)
     - Yoga
-  - RNReanimated/reanimated/apple (3.16.7):
+  - RNReanimated/reanimated/apple (3.16.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1912,7 +1912,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNReanimated/worklets (3.16.7):
+  - RNReanimated/worklets (3.16.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2291,7 +2291,7 @@ SPEC CHECKSUMS:
   EXConstants: a1f35b9aabbb3c6791f8e67722579b1ffcdd3f18
   EXImageLoader: 759063a65ab016b836f73972d3bb25404888713d
   Expo: 3e53243e3281214a7d613f8a875c0b732d7512c2
-  ExpoAdapterGoogleSignIn: 2b9d8c002ae5d09042b2fc87448dfc070d0e7a08
+  ExpoAdapterGoogleSignIn: c9eabd7a2986aeb9eb269620cbebbf0d81bae1e4
   ExpoAsset: 0687fe05f5d051c4a34dd1f9440bd00858413cfe
   ExpoBlur: 567af66164e3043a9a30069594aed1ddf0a88d97
   ExpoCrypto: 1eaf79360c8135af1f2ebb133394fd3513ca9a3d
@@ -2378,11 +2378,11 @@ SPEC CHECKSUMS:
   ReactCodegen: 21a52ccddc6479448fc91903a437dd23ddc7366c
   ReactCommon: bfd3600989d79bc3acbe7704161b171a1480b9fd
   RNCAsyncStorage: ac02697867ba18d2cfd761ebb144417fe65b210e
-  RNCKakaoCore: 7e0b5c6a762efbdc0dde7433e565d9e8249e31e7
-  RNCKakaoUser: e8ec00de09216f58659ae761cf94aa9fbe9e5b6e
+  RNCKakaoCore: 1119941395563ab87cd31769a9d4d38a70760e71
+  RNCKakaoUser: 84ca84264d0a657fbefd5eb09fcd22a44c46c631
   RNGestureHandler: 3e17c0c9ceb401041b0e64c8e4c8a057da978a9d
-  RNGoogleSignin: bf4fd524320eebe7d42312527e4ca920abedd0b6
-  RNReanimated: 5ed2b66c32cb3d398e4c12591b3053594fe2fcb9
+  RNGoogleSignin: cc5ab2f7f48bfc450e25e4ac7fb4504142aec118
+  RNReanimated: bc6b632bb0076e162721de78bb56b65463fe6c4b
   RNScreens: 2856a2abe759a5a56946874f76372c9f033af19a
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a

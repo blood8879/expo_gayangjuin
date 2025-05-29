@@ -197,7 +197,7 @@ export default function RecipeDetailScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.neutral[600]} />
         </TouchableOpacity>
         <View className="flex-row">
-          <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-white mr-3">
+          {/* <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-white mr-3">
             <Ionicons
               name="share-outline"
               size={22}
@@ -210,7 +210,7 @@ export default function RecipeDetailScreen() {
               size={22}
               color={theme.neutral[600]}
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center rounded-full bg-white"
             onPress={handleMoreOptionsPress}
