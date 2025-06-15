@@ -160,32 +160,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // const userInfo = await me();
       // console.log("🔥 userInfo:", userInfo);
 
-      Promise.all([login(), me()]).then(async ([token, userInfo]) => {
-        console.log("🔥 token:", token);
-        console.log("🔥 userInfo:", userInfo);
-        if (!token || !token.idToken) {
-          // 사용자에게 알림을 표시하거나 다른 방식으로 처리할 수 있습니다.
-          Alert.alert("로그인 실패", "로그인을 다시 시도해 주세요.");
-          // idToken이 없으면 Supabase 로그인을 시도할 수 없으므로 함수를 종료합니다.
-          // 또는 accessToken만 사용하는 다른 로직을 수행할 수 있습니다.
-          return;
-        }
+      const [token, userInfo] = await Promise.all([login(), me()]);
+      
+      console.log("🔥 token:", token);
+      console.log("🔥 userInfo:", userInfo);
+      
+      if (!token || !token.idToken) {
+        Alert.alert("로그인 실패", "로그인을 다시 시도해 주세요.");
+        return;
+      }
 
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: "kakao",
-          token: token.idToken,
-        });
-
-        setSession(data.session);
-        setUser(data.user);
-
-        setTimeout(async () => {
-          await refreshSession();
-          if (data.user?.id) {
-            router.replace("/(tabs)"); // 로그인 후 이동
-          }
-        }, 500);
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: "kakao",
+        token: token.idToken,
       });
+
+      if (error) {
+        throw error;
+      }
+
+      // AuthContext의 인증 상태 리스너가 자동으로 네비게이션을 처리하도록 함
+      console.log("✅ 카카오 로그인 성공");
     } catch (error: any) {
       console.error("❌ Kakao sign-in error (전체):", error);
       Alert.alert(
