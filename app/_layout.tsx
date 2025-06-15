@@ -18,8 +18,14 @@ import { queryClient } from "@/lib/query/queryClient";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 import { initializeKakaoSDK } from "@react-native-kakao/core";
+import ErrorBoundaryComponent from "@/components/ErrorBoundary";
 
 export { ErrorBoundary } from "expo-router";
+
+// 사용자 정의 ErrorBoundary도 내보내기
+export function CustomErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return <ErrorBoundaryComponent error={error} retry={retry} />;
+}
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -34,23 +40,32 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    initializeKakaoSDK("6c58516c278c4c86f674c30fa5efbfbe");
+    try {
+      initializeKakaoSDK("6c58516c278c4c86f674c30fa5efbfbe");
+    } catch (error) {
+      console.error("Kakao SDK 초기화 오류:", error);
+    }
   }, []);
 
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.error("폰트 로딩 오류:", error);
+      // 프로덕션에서는 에러를 throw하지 않고 로그만 출력
+      if (__DEV__) {
+        throw error;
+      }
+    }
   }, [error]);
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch((err) => {
+        console.error("SplashScreen 숨김 오류:", err);
+      });
     }
   }, [loaded]);
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
-  if (!loaded) {
+  if (!loaded && !error) {
     return null;
   }
 

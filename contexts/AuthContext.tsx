@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error("사용자 상태 확인 오류:", error);
+      // 네트워크 오류나 다른 문제가 있어도 앱이 계속 작동하도록 함
       setUser(null);
       setSession(null);
     } finally {
@@ -77,17 +78,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     refreshSession();
 
-    // 세션 변경 감지 이벤트 리스너 설정
+    // 세션 변경 감지 이벤트 리스터 설정
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log("Auth 상태 변경:", event);
-        setSession(newSession);
+        try {
+          setSession(newSession);
 
-        if (newSession) {
-          const currentUser = await getCurrentUser();
-          setUser(currentUser);
-        } else {
+          if (newSession) {
+            const currentUser = await getCurrentUser();
+            setUser(currentUser);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Auth 상태 변경 처리 오류:", error);
           setUser(null);
+          setSession(null);
         }
       }
     );
