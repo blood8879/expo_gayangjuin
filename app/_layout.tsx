@@ -10,6 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { UpdateProvider } from "@/contexts/UpdateContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { MenuProvider } from "react-native-popup-menu";
 import { View } from "react-native";
@@ -79,7 +80,8 @@ function RootLayoutNav() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+        <UpdateProvider>
+          <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <MenuProvider>
               <View style={{ flex: 1 }}>
@@ -110,7 +112,8 @@ function RootLayoutNav() {
               </View>
             </MenuProvider>
           </GestureHandlerRootView>
-        </ThemeProvider>
+          </ThemeProvider>
+        </UpdateProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

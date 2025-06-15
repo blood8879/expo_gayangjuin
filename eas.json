@@ -6,23 +6,38 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "distribution": "store",
+      "channel": "production",
       "env": {
         "NODE_ENV": "production"
       }
     },
     "release": {
-      "distribution": "store"
+      "distribution": "store",
+      "channel": "production"
     }
   },
   "submit": {
     "production": {}
+  },
+  "update": {
+    "development": {
+      "channel": "development"
+    },
+    "preview": {
+      "channel": "preview"
+    },
+    "production": {
+      "channel": "production"
+    }
   }
 }
