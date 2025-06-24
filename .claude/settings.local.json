@@ -13,7 +13,14 @@
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(npx expo start:*)",
       "Bash(npx tsc:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npx expo install:*)",
+      "Bash(yarn add:*)",
+      "Bash(chmod:*)",
+      "Bash(./gradlew:*)",
+      "Bash(npx expo prebuild:*)",
+      "Bash(yarn android:*)",
+      "Bash(npx expo:*)"
     ],
     "deny": []
   }

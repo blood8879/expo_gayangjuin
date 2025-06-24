@@ -9,8 +9,9 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { AuthProvider } from "../contexts/AuthContext";
-import { useColorScheme } from "../hooks/useColorScheme";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { UpdateProvider } from "@/contexts/UpdateContext";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { MenuProvider } from "react-native-popup-menu";
 import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -23,7 +24,13 @@ import ErrorBoundaryComponent from "../components/ErrorBoundary";
 export { ErrorBoundary } from "expo-router";
 
 // 사용자 정의 ErrorBoundary도 내보내기
-export function CustomErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+export function CustomErrorBoundary({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry: () => void;
+}) {
   return <ErrorBoundaryComponent error={error} retry={retry} />;
 }
 
@@ -79,38 +86,43 @@ function RootLayoutNav() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <MenuProvider>
-              <View style={{ flex: 1 }}>
-                <StatusBar style={isDark ? "light" : "dark"} />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: {
-                      backgroundColor: isDark ? "#121212" : "#F8FAFC",
-                    },
-                    animation: "slide_from_right",
-                  }}
-                >
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="journals"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="login" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="adult-verification"
-                    options={{ headerShown: false }}
-                  />
-                </Stack>
-              </View>
-            </MenuProvider>
-          </GestureHandlerRootView>
-        </ThemeProvider>
+        <UpdateProvider>
+          <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <MenuProvider>
+                <View style={{ flex: 1 }}>
+                  <StatusBar style={isDark ? "light" : "dark"} />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: {
+                        backgroundColor: isDark ? "#121212" : "#F8FAFC",
+                      },
+                      animation: "slide_from_right",
+                    }}
+                  >
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="journals"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="login"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="adult-verification"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack>
+                </View>
+              </MenuProvider>
+            </GestureHandlerRootView>
+          </ThemeProvider>
+        </UpdateProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
