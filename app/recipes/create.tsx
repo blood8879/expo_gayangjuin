@@ -26,7 +26,7 @@ import StepsForm from "../../components/recipe/StepsForm";
 // 새로운 API 모듈에서 함수 불러오기
 import { RecipeFormData } from "../../lib/api/recipe";
 import { useAuth } from "../../contexts/AuthContext";
-import { useCreateRecipe } from "@/lib/query/recipeQueries";
+import { useCreateRecipe } from "../../lib/query/recipeQueries";
 
 type IngredientType = {
   id: string;

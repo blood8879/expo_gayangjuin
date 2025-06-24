@@ -12,11 +12,11 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { theme } from "@/constants/theme";
-import { useRecipes } from "@/lib/query/recipeQueries";
-import { useAuth } from "@/contexts/AuthContext";
+import { theme } from "../../../constants/theme";
+import { useRecipes } from "../../../lib/query/recipeQueries";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { recipeKeys } from "@/lib/query/queryClient";
+import { recipeKeys } from "../../../lib/query/queryClient";
 
 // Recipe 타입 정의
 interface Recipe {

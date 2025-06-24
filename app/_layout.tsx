@@ -9,16 +9,16 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { AuthProvider } from "../contexts/AuthContext";
+import { useColorScheme } from "../hooks/useColorScheme";
 import { MenuProvider } from "react-native-popup-menu";
 import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { queryClient } from "@/lib/query/queryClient";
+import { queryClient } from "../lib/query/queryClient";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
 import { initializeKakaoSDK } from "@react-native-kakao/core";
-import ErrorBoundaryComponent from "@/components/ErrorBoundary";
+import ErrorBoundaryComponent from "../components/ErrorBoundary";
 
 export { ErrorBoundary } from "expo-router";
 

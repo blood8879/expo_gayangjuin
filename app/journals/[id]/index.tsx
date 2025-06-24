@@ -20,18 +20,18 @@ import {
   MenuTrigger,
 } from "react-native-popup-menu";
 import { Swipeable } from "react-native-gesture-handler";
-import { theme } from "@/constants/theme";
+import { theme } from "../../../constants/theme";
 import {
   useJournal,
   useDeleteJournal,
   useUpdateJournal,
   useDeleteJournalRecord,
-} from "@/lib/query/journalQueries";
-import { formatDetailDate, formatDate } from "@/lib/utils/dateUtils";
-import StageList from "@/components/journal/StageList";
-import StageItem from "@/components/journal/StageItem";
-import StageIndicator from "@/components/journal/StageIndicator";
-import RecipeStages from "@/components/journal/RecipeStages";
+} from "../../../lib/query/journalQueries";
+import { formatDetailDate, formatDate } from "../../../lib/utils/dateUtils";
+import StageList from "../../../components/journal/StageList";
+import StageItem from "../../../components/journal/StageItem";
+import StageIndicator from "../../../components/journal/StageIndicator";
+import RecipeStages from "../../../components/journal/RecipeStages";
 
 // RecipeStage 타입 정의 추가
 interface RecipeStage {

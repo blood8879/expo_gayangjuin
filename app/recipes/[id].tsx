@@ -14,10 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
-import { theme } from "@/constants/theme";
-import { Card } from "@/components/ui/Card";
-import { useRecipe, useDeleteRecipe } from "@/lib/query/recipeQueries";
-import { useJournals } from "@/lib/query/journalQueries";
+import { theme } from "../../constants/theme";
+import { Card } from "../../components/ui/Card";
+import { useRecipe, useDeleteRecipe } from "../../lib/query/recipeQueries";
+import { useJournals } from "../../lib/query/journalQueries";
 
 // 타입 정의 추가
 interface Ingredient {

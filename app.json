@@ -18,8 +18,7 @@
         "backgroundColor": "#ffffff"
       },
       "googleServicesFile": "./google-services.json",
-      "package": "com.jiamyun.expogayangjuin",
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "package": "com.jiamyun.expogayangjuin"
     },
     "web": {
       "bundler": "metro",

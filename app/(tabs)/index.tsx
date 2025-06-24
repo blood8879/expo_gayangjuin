@@ -11,9 +11,9 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useRecipes } from "@/lib/query/recipeQueries";
-import { useJournals } from "@/lib/query/journalQueries";
-import { formatDate } from "@/lib/utils/dateUtils";
+import { useRecipes } from "../../lib/query/recipeQueries";
+import { useJournals } from "../../lib/query/journalQueries";
+import { formatDate } from "../../lib/utils/dateUtils";
 
 export default function HomeScreen() {
   // useRecipes 훅 사용

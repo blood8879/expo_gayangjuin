@@ -13,8 +13,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
-import { theme } from "@/constants/theme";
-import { supabase } from "@/lib/supabase";
+import { theme } from "../../constants/theme";
+import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface UserProfile {

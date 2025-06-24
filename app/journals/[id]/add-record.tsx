@@ -13,17 +13,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "@/constants/theme";
+import { theme } from "../../../constants/theme";
 import {
   useJournal,
   useCreateJournalRecord,
   useUploadJournalImage,
   useSaveJournalImage,
-} from "@/lib/query/journalQueries";
-import { formatDateWithDay } from "@/lib/utils/dateUtils";
+} from "../../../lib/query/journalQueries";
+import { formatDateWithDay } from "../../../lib/utils/dateUtils";
 import * as ImagePicker from "expo-image-picker";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../contexts/AuthContext";
 import { decode } from "base64-arraybuffer";
 
 // 레시피 단계 타입 정의

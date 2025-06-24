@@ -11,12 +11,13 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { theme } from "@/constants/theme";
-import { useJournals } from "@/lib/query/journalQueries";
-import { useAuth } from "@/contexts/AuthContext";
+
+import { useJournals } from "../../../lib/query/journalQueries";
+import { useAuth } from "../../../contexts/AuthContext";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useIsFocused } from "@react-navigation/native";
+import { theme } from "../../../constants/theme";
 
 // 레시피 타입 정의
 type RecipeType =

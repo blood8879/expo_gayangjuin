@@ -8,7 +8,12 @@
       "Bash(npm test:*)",
       "Bash(rm:*)",
       "Bash(npm ls:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(npx expo start:*)",
+      "Bash(npx tsc:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

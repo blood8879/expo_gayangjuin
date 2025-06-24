@@ -14,11 +14,11 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { theme } from "@/constants/theme";
-import { supabase } from "@/lib/supabase";
+import { theme } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../contexts/AuthContext";
-import { useJournals } from "@/lib/query/journalQueries";
-import { useRecipes } from "@/lib/query/recipeQueries";
+import { useJournals } from "../../../lib/query/journalQueries";
+import { useRecipes } from "../../../lib/query/recipeQueries";
 import Constants from "expo-constants";
 
 interface UserProfile {

@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 export type ProgressBarColorScheme =
   | "primary"

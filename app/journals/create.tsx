@@ -14,12 +14,12 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { theme } from "@/constants/theme";
+import { theme } from "../../constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useRecipes } from "@/lib/query/recipeQueries";
-import { useCreateJournal } from "@/lib/query/journalQueries";
-import { formatDateWithDay } from "@/lib/utils/dateUtils";
+import { useRecipes } from "../../lib/query/recipeQueries";
+import { useCreateJournal } from "../../lib/query/journalQueries";
+import { formatDateWithDay } from "../../lib/utils/dateUtils";
 
 // 색상 정보 인터페이스 정의
 interface RecipeColorInfo {

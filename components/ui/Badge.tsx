@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { useColorScheme } from "../../hooks/useColorScheme";
 import { ThemedText } from "../ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 

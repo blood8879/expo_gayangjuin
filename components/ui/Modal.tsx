@@ -7,7 +7,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { useColorScheme } from "../../hooks/useColorScheme";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
 import { Ionicons } from "@expo/vector-icons";
