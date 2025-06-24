@@ -20,7 +20,6 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useJournals } from "../../../lib/query/journalQueries";
 import { useRecipes } from "../../../lib/query/recipeQueries";
 import Constants from "expo-constants";
-import UpdateStatus from "@/components/UpdateStatus";
 
 interface UserProfile {
   name: string;
@@ -423,9 +422,6 @@ export default function ProfileScreen() {
         <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-3 mt-5">
           설정
         </Text>
-
-        {/* 업데이트 상태 */}
-        <UpdateStatus />
 
         <ToggleItem
           icon="notifications-outline"
